@@ -5,8 +5,10 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QComboBox, QCheckBox, QGroupBox, 
                              QFormLayout, QMessageBox, QStackedWidget, QFrame,
                              QLineEdit, QFileDialog)
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QWindow
+from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
+from PyQt5.QtGui import QWindow, QImage, QPixmap
+import cv2
+import numpy as np
 
 class IosTab(QWidget):
     def __init__(self, runner, monitor):
@@ -18,6 +20,12 @@ class IosTab(QWidget):
         # Timer to poll and embed UxPlay window
         self.embed_timer = QTimer()
         self.embed_timer.timeout.connect(self.check_and_embed_ios)
+        
+        # Timer to track recording seconds
+        self.rec_seconds = 0
+        self.is_recording = False
+        self.rec_timer = QTimer()
+        self.rec_timer.timeout.connect(self.update_recording_timer)
         
         self.init_ui()
         
@@ -219,18 +227,33 @@ class IosTab(QWidget):
                 border: 1px solid #2D3748;
                 border-radius: 8px;
             }
-            QPushButton {
-                font-size: 11px;
-                font-weight: bold;
-                height: 40px;
-                border: none;
-                border-radius: 6px;
+            QLabel#recTimer {
+                color: #8E9AAF;
+                font-size: 10px;
+                font-weight: 800;
+                background-color: #12141C;
+                border: 1px solid #2D3748;
+                border-radius: 4px;
+                padding: 6px;
                 text-align: center;
             }
         """)
         toolbar_layout = QVBoxLayout(self.toolbar_card)
         toolbar_layout.setContentsMargins(8, 12, 8, 12)
         toolbar_layout.setSpacing(10)
+
+        # Recording Timer HUD
+        self.rec_status_label = QLabel("● REC 00:00:00")
+        self.rec_status_label.setObjectName("recTimer")
+        self.rec_status_label.setAlignment(Qt.AlignCenter)
+        toolbar_layout.addWidget(self.rec_status_label)
+
+        # Record Trigger Button
+        self.rec_toggle_btn = QPushButton("🔴 Record")
+        self.rec_toggle_btn.setCursor(Qt.PointingHandCursor)
+        self.rec_toggle_btn.setStyleSheet("background-color: #E74C3C; color: white;")
+        self.rec_toggle_btn.clicked.connect(self.toggle_recording_action)
+        toolbar_layout.addWidget(self.rec_toggle_btn)
 
         # Screenshot Button
         self.screenshot_btn = QPushButton("📷 Screenshot")
@@ -497,5 +520,85 @@ class IosTab(QWidget):
 
     def closeEvent(self, event):
         self.embed_timer.stop()
+        if hasattr(self, 'rec_fps_timer'):
+            self.rec_fps_timer.stop()
+        if hasattr(self, 'video_writer') and self.video_writer:
+            self.video_writer.release()
         self.runner.stop_process("ios_airplay")
         event.accept()
+
+    def update_recording_timer(self):
+        self.rec_seconds += 1
+        hours, remainder = divmod(self.rec_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        self.rec_status_label.setText(f"● REC {hours:02d}:{minutes:02d}:{seconds:02d}")
+
+    def toggle_recording_action(self):
+        if not self.is_recording:
+            # Start Recording
+            self.is_recording = True
+            self.rec_seconds = 0
+            self.rec_status_label.setText("● REC 00:00:00")
+            self.rec_toggle_btn.setText("⏹️ Stop Rec")
+            self.rec_toggle_btn.setStyleSheet("background-color: #27AE60; color: white;")
+            
+            # Setup VideoWriter
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            filename = f"N8GTools_iOS_Rec_{timestamp}.mp4"
+            self.record_path = os.path.join(self.save_dir_input.text(), filename)
+            
+            pixmap = self.video_container.grab()
+            width = pixmap.width()
+            height = pixmap.height()
+            
+            # Ensure dimensions are even
+            width = width - (width % 2)
+            height = height - (height % 2)
+            
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            self.video_writer = cv2.VideoWriter(self.record_path, fourcc, 30.0, (width, height))
+            
+            # Start Timers
+            self.rec_timer.start(1000)
+            self.rec_fps_timer = QTimer()
+            self.rec_fps_timer.timeout.connect(self.record_frame_callback)
+            self.rec_fps_timer.start(33) # 30 FPS
+        else:
+            # Stop Recording
+            self.is_recording = False
+            self.rec_timer.stop()
+            if hasattr(self, 'rec_fps_timer'):
+                self.rec_fps_timer.stop()
+            
+            if hasattr(self, 'video_writer') and self.video_writer:
+                self.video_writer.release()
+                self.video_writer = None
+                
+            self.rec_status_label.setText("● REC 00:00:00")
+            self.rec_toggle_btn.setText("🔴 Record")
+            self.rec_toggle_btn.setStyleSheet("background-color: #E74C3C; color: white;")
+            
+            QMessageBox.information(
+                self, "Recording Saved", 
+                f"iOS Gameplay recording saved successfully to folder:\n{self.save_dir_input.text()}"
+            )
+
+    def record_frame_callback(self):
+        if not self.is_recording or not hasattr(self, 'video_writer') or not self.video_writer:
+            return
+            
+        try:
+            pixmap = self.video_container.grab()
+            image = pixmap.toImage().convertToFormat(QImage.Format_RGB32)
+            
+            width = image.width() - (image.width() % 2)
+            height = image.height() - (image.height() % 2)
+            
+            ptr = image.bits()
+            ptr.setsize(image.height() * image.width() * 4)
+            arr = np.frombuffer(ptr, dtype=np.uint8).reshape((image.height(), image.width(), 4))
+            frame = arr[0:height, 0:width, 0:3]
+            
+            self.video_writer.write(frame)
+        except Exception:
+            pass
