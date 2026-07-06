@@ -542,27 +542,42 @@ class IosTab(QWidget):
             self.rec_toggle_btn.setText("⏹️ Stop Rec")
             self.rec_toggle_btn.setStyleSheet("background-color: #27AE60; color: white;")
             
+            # Parse selected resolution
+            res_text = self.res_combo.currentText()
+            if "3840" in res_text:
+                self.rec_width, self.rec_height = 3840, 2160
+            elif "2560" in res_text:
+                self.rec_width, self.rec_height = 2560, 1440
+            elif "1280" in res_text:
+                self.rec_width, self.rec_height = 1280, 720
+            else:
+                self.rec_width, self.rec_height = 1920, 1080
+                
+            # Parse selected FPS
+            fps_text = self.fps_combo.currentText()
+            if "120" in fps_text:
+                fps = 120.0
+            elif "90" in fps_text:
+                fps = 90.0
+            elif "60" in fps_text:
+                fps = 60.0
+            else:
+                fps = 30.0
+            
             # Setup VideoWriter
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             filename = f"N8GTools_iOS_Rec_{timestamp}.mp4"
             self.record_path = os.path.join(self.save_dir_input.text(), filename)
             
-            pixmap = self.video_container.grab()
-            width = pixmap.width()
-            height = pixmap.height()
-            
-            # Ensure dimensions are even
-            width = width - (width % 2)
-            height = height - (height % 2)
-            
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            self.video_writer = cv2.VideoWriter(self.record_path, fourcc, 30.0, (width, height))
+            self.video_writer = cv2.VideoWriter(self.record_path, fourcc, fps, (self.rec_width, self.rec_height))
             
             # Start Timers
             self.rec_timer.start(1000)
             self.rec_fps_timer = QTimer()
             self.rec_fps_timer.timeout.connect(self.record_frame_callback)
-            self.rec_fps_timer.start(33) # 30 FPS
+            interval_ms = max(5, int(1000.0 / fps))
+            self.rec_fps_timer.start(interval_ms)
         else:
             # Stop Recording
             self.is_recording = False
@@ -591,14 +606,17 @@ class IosTab(QWidget):
             pixmap = self.video_container.grab()
             image = pixmap.toImage().convertToFormat(QImage.Format_RGB32)
             
-            width = image.width() - (image.width() % 2)
-            height = image.height() - (image.height() % 2)
+            w = image.width()
+            h = image.height()
             
             ptr = image.bits()
-            ptr.setsize(image.height() * image.width() * 4)
-            arr = np.frombuffer(ptr, dtype=np.uint8).reshape((image.height(), image.width(), 4))
-            frame = arr[0:height, 0:width, 0:3]
+            ptr.setsize(h * w * 4)
+            arr = np.frombuffer(ptr, dtype=np.uint8).reshape((h, w, 4))
+            frame = arr[0:h, 0:w, 0:3]
             
-            self.video_writer.write(frame)
+            # Resize frame to target recording resolution (width, height)
+            frame_resized = cv2.resize(frame, (self.rec_width, self.rec_height), interpolation=cv2.INTER_LINEAR)
+            
+            self.video_writer.write(frame_resized)
         except Exception:
             pass
