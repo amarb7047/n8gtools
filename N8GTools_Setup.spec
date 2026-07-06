@@ -5,7 +5,7 @@ a = Analysis(
     ['setup_wizard.py'],
     pathex=[],
     binaries=[],
-    datas=[('dist/N8GTools.exe', '.'), ('logo.png', '.'), ('logo.ico', '.')],
+    datas=[('dist/N8GTools.exe', '.'), ('logo.png', '.'), ('logo.ico', '.'), ('N8Gamer.jpeg', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

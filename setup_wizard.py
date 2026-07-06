@@ -125,6 +125,7 @@ class InstallThread(QThread):
             exe_src = os.path.join(base_path, "N8GTools.exe")
             logo_src = os.path.join(base_path, "logo.png")
             ico_src = os.path.join(base_path, "logo.ico")
+            avatar_src = os.path.join(base_path, "N8Gamer.jpeg")
 
             # Validate sources
             if not os.path.exists(exe_src):
@@ -132,6 +133,7 @@ class InstallThread(QThread):
                 exe_src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist", "N8GTools.exe")
                 logo_src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.png")
                 ico_src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.ico")
+                avatar_src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "N8Gamer.jpeg")
 
             if not os.path.exists(exe_src):
                 self.finished.emit(False, "Error: Compiled N8GTools.exe not found in installer package.")
@@ -144,6 +146,8 @@ class InstallThread(QThread):
                 shutil.copy2(logo_src, os.path.join(self.dest_dir, "logo.png"))
             if os.path.exists(ico_src):
                 shutil.copy2(ico_src, os.path.join(self.dest_dir, "logo.ico"))
+            if os.path.exists(avatar_src):
+                shutil.copy2(avatar_src, os.path.join(self.dest_dir, "N8Gamer.jpeg"))
 
             # 3. Optionally copy local engines to prevent re-downloading
             if self.copy_engines:
@@ -197,7 +201,7 @@ class InstallThread(QThread):
             
             # Set values
             winreg.SetValueEx(key, "DisplayName", 0, winreg.REG_SZ, "N8 G Tools")
-            winreg.SetValueEx(key, "DisplayVersion", 0, winreg.REG_SZ, "1.0.0")
+            winreg.SetValueEx(key, "DisplayVersion", 0, winreg.REG_SZ, "1.0.1")
             winreg.SetValueEx(key, "Publisher", 0, winreg.REG_SZ, "N8 G Tools Team")
             winreg.SetValueEx(key, "DisplayIcon", 0, winreg.REG_SZ, ico_path)
             

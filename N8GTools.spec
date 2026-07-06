@@ -3,8 +3,11 @@
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=[],
-    datas=[],
+    datas=[
+        ('logo.png', '.'),
+        ('logo.ico', '.'),
+        ('N8Gamer.jpeg', '.')
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
