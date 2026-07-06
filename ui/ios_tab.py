@@ -1,10 +1,11 @@
 import os
 import time
 import subprocess
+import requests
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QComboBox, QCheckBox, QGroupBox, 
                              QFormLayout, QMessageBox, QStackedWidget, QFrame,
-                             QLineEdit, QFileDialog)
+                             QLineEdit, QFileDialog, QApplication)
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtGui import QWindow, QImage, QPixmap
 import cv2
@@ -444,7 +445,9 @@ class IosTab(QWidget):
         import win32gui
         import win32con
         
-        hwnd = win32gui.FindWindow(None, "UxPlay")
+        hwnd = win32gui.FindWindow(None, "AirPlay Video Stream")
+        if not hwnd:
+            hwnd = win32gui.FindWindow(None, "UxPlay")
         
         if hwnd:
             if not self.is_embedded:
@@ -524,6 +527,11 @@ class IosTab(QWidget):
             self.rec_fps_timer.stop()
         if hasattr(self, 'video_writer') and self.video_writer:
             self.video_writer.release()
+        if hasattr(self, 'audio_proc') and self.audio_proc:
+            try:
+                self.audio_proc.terminate()
+            except Exception:
+                pass
         self.runner.stop_process("ios_airplay")
         event.accept()
 
@@ -534,50 +542,19 @@ class IosTab(QWidget):
         self.rec_status_label.setText(f"● REC {hours:02d}:{minutes:02d}:{seconds:02d}")
 
     def toggle_recording_action(self):
+        ffmpeg_path = os.path.join(self.runner.downloader.engines_dir, "ffmpeg.exe")
+        if not os.path.exists(ffmpeg_path):
+            self.rec_toggle_btn.setEnabled(False)
+            self.rec_status_label.setText("Downloading Audio Engine (0%)...")
+            self.dl_worker = FFmpegDownloaderWorker(ffmpeg_path)
+            self.dl_worker.progress.connect(self.on_ffmpeg_progress)
+            self.dl_worker.finished.connect(self.on_ffmpeg_finished)
+            self.dl_worker.start()
+            return
+
         if not self.is_recording:
-            # Start Recording
-            self.is_recording = True
-            self.rec_seconds = 0
-            self.rec_status_label.setText("● REC 00:00:00")
-            self.rec_toggle_btn.setText("⏹️ Stop Rec")
-            self.rec_toggle_btn.setStyleSheet("background-color: #27AE60; color: white;")
-            
-            # Parse selected resolution
-            res_text = self.res_combo.currentText()
-            if "3840" in res_text:
-                self.rec_width, self.rec_height = 3840, 2160
-            elif "2560" in res_text:
-                self.rec_width, self.rec_height = 2560, 1440
-            elif "1280" in res_text:
-                self.rec_width, self.rec_height = 1280, 720
-            else:
-                self.rec_width, self.rec_height = 1920, 1080
-                
-            # Parse selected FPS
-            fps_text = self.fps_combo.currentText()
-            if "120" in fps_text:
-                fps = 120.0
-            elif "90" in fps_text:
-                fps = 90.0
-            elif "60" in fps_text:
-                fps = 60.0
-            else:
-                fps = 30.0
-            
-            # Setup VideoWriter
-            timestamp = time.strftime("%Y%m%d_%H%M%S")
-            filename = f"N8GTools_iOS_Rec_{timestamp}.mp4"
-            self.record_path = os.path.join(self.save_dir_input.text(), filename)
-            
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            self.video_writer = cv2.VideoWriter(self.record_path, fourcc, fps, (self.rec_width, self.rec_height))
-            
-            # Start Timers
-            self.rec_timer.start(1000)
-            self.rec_fps_timer = QTimer()
-            self.rec_fps_timer.timeout.connect(self.record_frame_callback)
-            interval_ms = max(5, int(1000.0 / fps))
-            self.rec_fps_timer.start(interval_ms)
+            self.has_audio = True
+            self.start_recording_sequence()
         else:
             # Stop Recording
             self.is_recording = False
@@ -589,14 +566,131 @@ class IosTab(QWidget):
                 self.video_writer.release()
                 self.video_writer = None
                 
+            # Stop Audio process
+            if hasattr(self, 'audio_proc') and self.audio_proc:
+                try:
+                    # ffmpeg requires sending 'q' to stdin to save aac file cleanly
+                    self.audio_proc.communicate(input=b'q', timeout=2)
+                except Exception:
+                    try:
+                        self.audio_proc.terminate()
+                    except Exception:
+                        pass
+                self.audio_proc.wait()
+                self.audio_proc = None
+                
+            self.rec_status_label.setText("Processing Audio...")
+            QApplication.processEvents()
+            
+            # Mux audio and video if audio exists
+            ffmpeg_path = os.path.join(self.runner.downloader.engines_dir, "ffmpeg.exe")
+            if os.path.exists(ffmpeg_path) and os.path.exists(self.temp_audio_path) and os.path.exists(self.temp_video_path) and os.path.getsize(self.temp_audio_path) > 0:
+                cmd = [ffmpeg_path, "-i", self.temp_video_path, "-i", self.temp_audio_path, "-c:v", "copy", "-c:a", "aac", "-map", "0:v:0", "-map", "1:a:0", "-y", self.record_path]
+                creationflags = 0x08000000 if os.name == 'nt' else 0
+                subprocess.run(cmd, creationflags=creationflags)
+                
+                # Clean up temp files
+                try:
+                    os.remove(self.temp_video_path)
+                    os.remove(self.temp_audio_path)
+                except Exception:
+                    pass
+            else:
+                # Rename temp video to final path if no audio
+                if os.path.exists(self.temp_video_path):
+                    try:
+                        if os.path.exists(self.record_path):
+                            os.remove(self.record_path)
+                        os.rename(self.temp_video_path, self.record_path)
+                    except Exception:
+                        pass
+                    try:
+                        os.remove(self.temp_audio_path)
+                    except Exception:
+                        pass
+                        
             self.rec_status_label.setText("● REC 00:00:00")
             self.rec_toggle_btn.setText("🔴 Record")
             self.rec_toggle_btn.setStyleSheet("background-color: #E74C3C; color: white;")
             
             QMessageBox.information(
                 self, "Recording Saved", 
-                f"iOS Gameplay recording saved successfully to folder:\n{self.save_dir_input.text()}"
+                f"iOS Gameplay recording with system audio saved successfully to folder:\n{self.save_dir_input.text()}"
             )
+
+    def on_ffmpeg_progress(self, percent):
+        self.rec_status_label.setText(f"Downloading Audio Engine ({percent}%)...")
+
+    def on_ffmpeg_finished(self, success, err):
+        self.rec_toggle_btn.setEnabled(True)
+        if success:
+            self.rec_status_label.setText("Audio Engine Loaded.")
+            self.toggle_recording_action()
+        else:
+            self.rec_status_label.setText("Download Failed.")
+            QMessageBox.critical(self, "Audio Engine Error", f"Failed to download audio recording utility: {err}\nRecording video only.")
+            self.has_audio = False
+            self.start_recording_sequence()
+
+    def start_recording_sequence(self):
+        # Start Recording
+        self.is_recording = True
+        self.rec_seconds = 0
+        self.rec_status_label.setText("● REC 00:00:00")
+        self.rec_toggle_btn.setText("⏹️ Stop Rec")
+        self.rec_toggle_btn.setStyleSheet("background-color: #27AE60; color: white;")
+        
+        # Parse selected resolution
+        res_text = self.res_combo.currentText()
+        if "3840" in res_text:
+            self.rec_width, self.rec_height = 3840, 2160
+        elif "2560" in res_text:
+            self.rec_width, self.rec_height = 2560, 1440
+        elif "1280" in res_text:
+            self.rec_width, self.rec_height = 1280, 720
+        else:
+            self.rec_width, self.rec_height = 1920, 1080
+            
+        # Parse selected FPS
+        fps_text = self.fps_combo.currentText()
+        if "120" in fps_text:
+            fps = 120.0
+        elif "90" in fps_text:
+            fps = 90.0
+        elif "60" in fps_text:
+            fps = 60.0
+        else:
+            fps = 30.0
+        
+        # Setup temp paths
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        filename = f"N8GTools_iOS_Rec_{timestamp}.mp4"
+        self.record_path = os.path.join(self.save_dir_input.text(), filename)
+        
+        self.temp_video_path = os.path.join(self.save_dir_input.text(), f"temp_video_{timestamp}.mp4")
+        self.temp_audio_path = os.path.join(self.save_dir_input.text(), f"temp_audio_{timestamp}.aac")
+        
+        # Setup VideoWriter
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        self.video_writer = cv2.VideoWriter(self.temp_video_path, fourcc, fps, (self.rec_width, self.rec_height))
+        
+        # Start Audio recording if available
+        ffmpeg_path = os.path.join(self.runner.downloader.engines_dir, "ffmpeg.exe")
+        self.audio_proc = None
+        if os.path.exists(ffmpeg_path) and getattr(self, 'has_audio', True):
+            cmd = [ffmpeg_path, "-f", "wasapi", "-i", "default", "-y", self.temp_audio_path]
+            creationflags = 0x08000000 if os.name == 'nt' else 0
+            try:
+                self.audio_proc = subprocess.Popen(cmd, creationflags=creationflags, stdin=subprocess.PIPE)
+            except Exception:
+                self.audio_proc = None
+        
+        # Start Timers
+        self.rec_timer.start(1000)
+        self.rec_fps_timer = QTimer()
+        self.rec_fps_timer.timeout.connect(self.record_frame_callback)
+        interval_ms = max(5, int(1000.0 / fps))
+        self.rec_fps_timer.start(interval_ms)
 
     def record_frame_callback(self):
         if not self.is_recording or not hasattr(self, 'video_writer') or not self.video_writer:
@@ -614,9 +708,39 @@ class IosTab(QWidget):
             arr = np.frombuffer(ptr, dtype=np.uint8).reshape((h, w, 4))
             frame = arr[0:h, 0:w, 0:3]
             
-            # Resize frame to target recording resolution (width, height)
+            # Resize frame to target recording resolution
             frame_resized = cv2.resize(frame, (self.rec_width, self.rec_height), interpolation=cv2.INTER_LINEAR)
             
             self.video_writer.write(frame_resized)
         except Exception:
             pass
+
+
+class FFmpegDownloaderWorker(QThread):
+    finished = pyqtSignal(bool, str)
+    progress = pyqtSignal(int)
+
+    def __init__(self, dest_path):
+        super().__init__()
+        self.dest_path = dest_path
+
+    def run(self):
+        url = "https://github.com/eugeneware/ffmpeg-static/releases/download/b5.0.1/win32-x64"
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        try:
+            os.makedirs(os.path.dirname(self.dest_path), exist_ok=True)
+            r = requests.get(url, stream=True, headers=headers, timeout=30)
+            r.raise_for_status()
+            total = int(r.headers.get('content-length', 0))
+            downloaded = 0
+            with open(self.dest_path, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if total > 0:
+                            percent = int((downloaded / total) * 100)
+                            self.progress.emit(percent)
+            self.finished.emit(True, "")
+        except Exception as e:
+            self.finished.emit(False, str(e))
