@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>N8 G Tools – Developer Control & Telemetry Panel</title>
+  <link rel="shortcut icon" href="../web/logo.png" />
+  <link rel="stylesheet" href="../web/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    .control-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 40px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .form-group label {
+      color: var(--text-sub);
+      font-size: 13px;
+      font-weight: bold;
+    }
+    .form-group input {
+      background: #12141C;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px;
+      color: white;
+      font-family: inherit;
+      font-size: 14px;
+    }
+    .form-group input:focus {
+      border-color: var(--cyan);
+      outline: none;
+    }
+    /* Toggle Switch */
+    .switch-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #12141C;
+      padding: 15px 20px;
+      border-radius: 10px;
+      margin-bottom: 25px;
+    }
+    .switch-label {
+      display: flex;
+      flex-direction: column;
+    }
+    .switch-label strong {
+      color: white;
+      font-size: 15px;
+    }
+    .switch-label span {
+      color: var(--text-sub);
+      font-size: 12px;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 26px;
+    }
+    .switch input { 
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #2D3748;
+      transition: .3s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: var(--red);
+    }
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+  </style>
+</head>
+<body class="admin-body">
+
+  <!-- Header -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="nav-brand">
+        <img src="../web/logo.png" alt="N8 G Tools Logo" class="nav-logo">
+        <span class="nav-title">N8 G Tools Developer Console</span>
+      </div>
+      <nav class="nav-links">
+        <a href="../web/index.html" target="_blank">← Open Landing Site</a>
+        <button onclick="resetStats()" class="nav-btn-secondary" style="border-color: var(--red); color: var(--red);">Reset Telemetry</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Admin Main Dashboard -->
+  <main class="admin-container">
+    <div class="badge bg-purple">⚙️ Database Controller</div>
+    <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; margin-bottom: 25px; color: white;">Global Controls & Updates</h2>
+
+    <!-- App Configuration Panel -->
+    <div class="control-card">
+      <h3 style="font-family: 'Space Grotesk', sans-serif; color: white; margin-bottom: 20px; font-size: 20px;">Windows App & Website Server State</h3>
+      
+      <!-- Maintenance Switch -->
+      <div class="switch-container">
+        <div class="switch-label">
+          <strong>Server Maintenance Mode</strong>
+          <span>Blocks mirroring services and public site with a custom screen.</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="maintenance-toggle" onchange="saveConfig()">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Update details -->
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+        <div class="form-group">
+          <label for="app-version">Target Version (Updates Check)</label>
+          <input type="text" id="app-version" value="1.0.0" placeholder="e.g. 1.0.1">
+        </div>
+        <div class="form-group">
+          <label for="download-url">Download Package Source URL</label>
+          <input type="text" id="download-url" value="N8GTools_Setup.exe" placeholder="e.g. https://domain.com/downloads/N8GTools_Setup.exe">
+        </div>
+      </div>
+      
+      <button onclick="saveConfig()" class="nav-btn-primary" style="margin-top: 15px; border: none; padding: 12px 25px; cursor: pointer;">Save Configurations</button>
+    </div>
+
+    <!-- Stats Cards Grid -->
+    <div class="badge bg-emerald">📈 Telemetry Statistics</div>
+    <div class="stats-grid" style="margin-top: 15px;">
+      <div class="stat-card cyan-glow">
+        <div class="stat-icon">👁️</div>
+        <div class="stat-info">
+          <span class="stat-title">Total Page Views</span>
+          <h3 id="stat-views">0</h3>
+        </div>
+      </div>
+
+      <div class="stat-card emerald-glow">
+        <div class="stat-icon">📥</div>
+        <div class="stat-info">
+          <span class="stat-title">Total Downloads</span>
+          <h3 id="stat-downloads">0</h3>
+        </div>
+      </div>
+
+      <div class="stat-card purple-glow">
+        <div class="stat-icon">📈</div>
+        <div class="stat-info">
+          <span class="stat-title">Conversion Rate</span>
+          <h3 id="stat-conversion">0%</h3>
+        </div>
+      </div>
+    </div>
+
+    <!-- Telemetry Log Table Section -->
+    <div class="log-section">
+      <h3 style="font-family: 'Space Grotesk', sans-serif; color: white; margin-bottom: 20px; font-size: 22px;">Recent Download Logs (Live Geolocation)</h3>
+      
+      <div class="table-container">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>IP Address</th>
+              <th>Location</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="log-table-body">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Configuration Database endpoint (Uses Firebase Realtime Database URL)
+    // For free integration, we store in LocalStorage first, and fall back to fetching from a public database URL.
+    const DEFAULT_CONFIG = {
+      maintenance: false,
+      version: "1.0.0",
+      download_url: "N8GTools_Setup.exe"
+    };
+
+    function initConfig() {
+      if (!localStorage.getItem('n8g_config')) {
+        localStorage.setItem('n8g_config', JSON.stringify(DEFAULT_CONFIG));
+      }
+    }
+
+    initConfig();
+
+    function loadConfig() {
+      const config = JSON.parse(localStorage.getItem('n8g_config'));
+      document.getElementById('maintenance-toggle').checked = config.maintenance;
+      document.getElementById('app-version').value = config.version;
+      document.getElementById('download-url').value = config.download_url;
+    }
+
+    function saveConfig() {
+      const isMaint = document.getElementById('maintenance-toggle').checked;
+      const ver = document.getElementById('app-version').value.strip ? document.getElementById('app-version').value.strip() : document.getElementById('app-version').value;
+      const url = document.getElementById('download-url').value;
+
+      const config = {
+        maintenance: isMaint,
+        version: ver,
+        download_url: url
+      };
+
+      localStorage.setItem('n8g_config', JSON.stringify(config));
+      
+      // OPTIONAL FIREBASE HOOK:
+      // If the user replaces this with their live Firebase endpoint, this saves it globally:
+      // fetch('https://n8gtools-default-rtdb.firebaseio.com/config.json', { method: 'PUT', body: JSON.stringify(config) });
+    }
+
+    function loadStats() {
+      const views = parseInt(localStorage.getItem('n8g_views')) || 0;
+      const downloads = parseInt(localStorage.getItem('n8g_downloads')) || 0;
+      const logs = JSON.parse(localStorage.getItem('n8g_download_log')) || [];
+      const conversion = views > 0 ? ((downloads / views) * 100).toFixed(1) : '0.0';
+
+      document.getElementById('stat-views').innerText = views.toLocaleString();
+      document.getElementById('stat-downloads').innerText = downloads.toLocaleString();
+      document.getElementById('stat-conversion').innerText = `${conversion}%`;
+
+      const tbody = document.getElementById('log-table-body');
+      tbody.innerHTML = '';
+
+      if (logs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #8E9AAF; padding: 30px;">No download activity recorded yet.</td></tr>`;
+        return;
+      }
+
+      logs.forEach(log => {
+        const flagImg = log.flag ? `<img src="${log.flag}" alt="flag" style="vertical-align: middle; margin-right: 8px; border-radius: 2px;">` : '🌍 ';
+        tbody.innerHTML += `
+          <tr>
+            <td style="color: #66FCF1; font-weight: 600;">${log.timestamp}</td>
+            <td style="font-family: monospace;">${log.ip}</td>
+            <td>${flagImg}${log.city}, ${log.country}</td>
+            <td><span class="status-badge">Completed</span></td>
+          </tr>
+        `;
+      });
+    }
+
+    function resetStats() {
+      if (confirm('Are you sure you want to permanently clear all page view and download statistics?')) {
+        localStorage.setItem('n8g_views', '0');
+        localStorage.setItem('n8g_downloads', '0');
+        localStorage.setItem('n8g_download_log', JSON.stringify([]));
+        loadStats();
+      }
+    }
+
+    // Initial load
+    loadConfig();
+    loadStats();
+    setInterval(loadStats, 3000);
+  </script>
+
+</body>
+</html>

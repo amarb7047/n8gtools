@@ -1,0 +1,32 @@
+/* Global Variable Tokens & Resets */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-hero: linear-gradient(135deg, #090A0F 0%, #15102A 100%);
+  --bg-features: linear-gradient(180deg, #15102A 0%, #0F172A 100%);
+  --bg-booster: linear-gradient(135deg, #0F172A 0%, #062817 100%);
+  --bg-diagnostics: linear-gradient(135deg, #0F172A 0%, #1A0B2E 100%);
+  --bg-footer: #08080C;
+
+  --text-main: #FFFFFF;
+  --text-sub: #94A3B8;
+  --cyan: #66FCF1;
+  --emerald: #2ECC71;
+  --purple: #A855F7;
+  --red: #EF4444;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text-main);
+  background-color: #090A0F;
+}
+
+body {
+  overflow-x: hidden;
+}

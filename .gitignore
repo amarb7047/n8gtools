@@ -1,0 +1,14 @@
+build/
+dist/
+__pycache__/
+*.pyc
+website/node_modules/
+website/dist/
+engine/
+scrcpy-win64/
+uxplay-win64/
+.gemini/
+.agents/
+.vscode/
+.idea/
+local_stats.json
