@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame
 from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtGui import QDesktopServices, QFont, QPixmap
+from PyQt5.QtGui import QDesktopServices, QFont, QPixmap, QPainter, QPainterPath
 import os
 
 class HubTab(QWidget):
@@ -45,8 +45,26 @@ class HubTab(QWidget):
             logo_path = os.path.join(self.base_dir, "logo.png") if self.base_dir else "logo.png"
             
         if os.path.exists(logo_path):
-            pixmap = QPixmap(logo_path).scaled(130, 130, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            logo_label.setPixmap(pixmap)
+            pixmap = QPixmap(logo_path)
+            if not pixmap.isNull():
+                pixmap = pixmap.scaled(130, 130, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+                circular = QPixmap(130, 130)
+                circular.fill(Qt.transparent)
+                painter = QPainter(circular)
+                painter.setRenderHint(QPainter.Antialiasing)
+                painter.setRenderHint(QPainter.SmoothPixmapTransform)
+                path = QPainterPath()
+                path.addEllipse(0, 0, 130, 130)
+                painter.setClipPath(path)
+                x = (130 - pixmap.width()) // 2
+                y = (130 - pixmap.height()) // 2
+                painter.drawPixmap(x, y, pixmap)
+                painter.end()
+                logo_label.setPixmap(circular)
+            else:
+                logo_label.setText("N8")
+                logo_label.setFont(QFont("Segoe UI", 32, QFont.Bold))
+                logo_label.setStyleSheet("color: #66FCF1; border-radius: 70px; background-color: #12141C; border: 2px solid #66FCF1;")
         else:
             logo_label.setText("N8")
             logo_label.setFont(QFont("Segoe UI", 32, QFont.Bold))
