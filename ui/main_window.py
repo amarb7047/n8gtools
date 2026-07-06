@@ -281,6 +281,9 @@ class MainWindow(QMainWindow):
 
     def on_config_checked(self, config):
         if config and config.get("maintenance", False):
+            msg = config.get("maintenance_msg", "System upgrades in progress. Please check back later.")
+            if hasattr(self, 'maintenance_tab'):
+                self.maintenance_tab.set_message(msg)
             self.stacked_widget.setCurrentIndex(7) # Switch to Maintenance locking tab
             self.sidebar.hide() # Lock navigation
 

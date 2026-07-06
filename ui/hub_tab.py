@@ -40,7 +40,10 @@ class HubTab(QWidget):
         logo_label.setStyleSheet("border-radius: 70px; background-color: #12141C; border: 2px solid #66FCF1;")
         logo_label.setAlignment(Qt.AlignCenter)
         
-        logo_path = os.path.join(self.base_dir, "logo.png") if self.base_dir else "logo.png"
+        logo_path = os.path.join(self.base_dir, "N8Gamer.jpeg") if self.base_dir else "N8Gamer.jpeg"
+        if not os.path.exists(logo_path):
+            logo_path = os.path.join(self.base_dir, "logo.png") if self.base_dir else "logo.png"
+            
         if os.path.exists(logo_path):
             pixmap = QPixmap(logo_path).scaled(130, 130, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             logo_label.setPixmap(pixmap)
@@ -74,26 +77,51 @@ class HubTab(QWidget):
 
         info_layout.addSpacing(10)
 
+        # Buttons side-by-side
+        buttons_layout = QHBoxLayout()
+        buttons_layout.setSpacing(15)
+
         # Subscribe Button
         sub_btn = QPushButton("  SUBSCRIBE ON YOUTUBE")
-        sub_btn.setObjectName("btnLaunch")
-        sub_btn.setMinimumHeight(50)
+        sub_btn.setMinimumHeight(45)
         sub_btn.setCursor(Qt.PointingHandCursor)
         sub_btn.setStyleSheet("""
-            QPushButton#btnLaunch {
+            QPushButton {
                 background-color: #FF0000;
                 color: white;
-                font-size: 14px;
+                font-size: 12px;
                 font-weight: 800;
                 border: none;
                 border-radius: 6px;
             }
-            QPushButton#btnLaunch:hover {
+            QPushButton:hover {
                 background-color: #CC0000;
             }
         """)
         sub_btn.clicked.connect(self.open_channel)
-        info_layout.addWidget(sub_btn)
+        buttons_layout.addWidget(sub_btn)
+
+        # Official Website Button
+        web_btn = QPushButton("  OFFICIAL WEBSITE")
+        web_btn.setMinimumHeight(45)
+        web_btn.setCursor(Qt.PointingHandCursor)
+        web_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #4F46E5;
+                color: white;
+                font-size: 12px;
+                font-weight: 800;
+                border: none;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #4338CA;
+            }
+        """)
+        web_btn.clicked.connect(self.open_website)
+        buttons_layout.addWidget(web_btn)
+
+        info_layout.addLayout(buttons_layout)
 
         card_layout.addLayout(info_layout, 1)
 
@@ -120,4 +148,8 @@ class HubTab(QWidget):
 
     def open_channel(self):
         url = QUrl("https://youtube.com/@n8gamer70?si=10-ayl3CYBu4LF0a")
+        QDesktopServices.openUrl(url)
+
+    def open_website(self):
+        url = QUrl("https://n8-g-tools.web.app")
         QDesktopServices.openUrl(url)

@@ -42,15 +42,15 @@ class MaintenanceTab(QWidget):
         title.setAlignment(Qt.AlignCenter)
         card_layout.addWidget(title)
 
-        desc = QLabel(
+        self.desc_label = QLabel(
             "N8 G Tools is temporarily undergoing system maintenance.\n"
             "Mirroring consoles and telemetry diagnostics are currently offline.\n"
             "Please check back shortly."
         )
-        desc.setStyleSheet("color: #8E9AAF; font-size: 12px; line-height: 1.6;")
-        desc.setAlignment(Qt.AlignCenter)
-        desc.setWordWrap(True)
-        card_layout.addWidget(desc)
+        self.desc_label.setStyleSheet("color: #8E9AAF; font-size: 12px; line-height: 1.6;")
+        self.desc_label.setAlignment(Qt.AlignCenter)
+        self.desc_label.setWordWrap(True)
+        card_layout.addWidget(self.desc_label)
 
         # Exit Button
         exit_btn = QPushButton("Exit Application")
@@ -79,3 +79,7 @@ class MaintenanceTab(QWidget):
         win = self.window()
         if win:
             win.close()
+
+    def set_message(self, text):
+        if text:
+            self.desc_label.setText(text)

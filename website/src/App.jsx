@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { db, ref, set, onValue, get, update } from './firebase';
+import { db, ref, set, onValue, get } from './firebase';
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [config, setConfig] = useState({
     maintenance: false,
     version: "1.0.0",
-    download_url: "public/N8GTools_Setup.exe"
+    download_url: "N8GTools_Setup.exe",
+    maintenance_msg: "N8 G Tools servers are currently undergoing upgrades. We will be back shortly!"
   });
 
   // Listen to configuration state from Firebase in real-time
@@ -22,7 +23,8 @@ export default function App() {
         set(configRef, {
           maintenance: false,
           version: "1.0.0",
-          download_url: "N8GTools_Setup.exe"
+          download_url: "N8GTools_Setup.exe",
+          maintenance_msg: "N8 G Tools servers are currently undergoing upgrades. We will be back shortly!"
         });
       }
     });
@@ -36,10 +38,7 @@ export default function App() {
     setCurrentPath(path);
   };
 
-  // Render Server Maintenance Overlay if active
-  if (config.maintenance && currentPath !== '/admin' && currentPath !== '/admin/') {
-    return <MaintenanceScreen />;
-  }
+
 
   if (currentPath === '/admin' || currentPath === '/admin/') {
     return <AdminPanel onNavigate={navigateTo} config={config} />;
@@ -270,15 +269,18 @@ function AdminPanel({ onNavigate, config }) {
   const [views, setViews] = useState(0);
   const [downloads, setDownloads] = useState(0);
   const [logs, setLogs] = useState([]);
+  
   const [maint, setMaint] = useState(config.maintenance);
   const [version, setVersion] = useState(config.version);
   const [dlUrl, setDlUrl] = useState(config.download_url);
+  const [maintMsg, setMaintMsg] = useState(config.maintenance_msg || "");
 
   // Sync state values when global configuration updates
   useEffect(() => {
     setMaint(config.maintenance);
     setVersion(config.version);
     setDlUrl(config.download_url);
+    setMaintMsg(config.maintenance_msg || "");
   }, [config]);
 
   // Load telemetry logs and statistics from Firebase Database
@@ -330,7 +332,8 @@ function AdminPanel({ onNavigate, config }) {
     set(ref(db, 'config'), {
       maintenance: maint,
       version: version,
-      download_url: dlUrl
+      download_url: dlUrl,
+      maintenance_msg: maintMsg
     }).then(() => {
       alert('Firebase Database configurations successfully updated!');
     });
@@ -431,6 +434,15 @@ function AdminPanel({ onNavigate, config }) {
                 placeholder="e.g. N8GTools_Setup.exe" 
               />
             </div>
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label>Custom Maintenance Overlay Message</label>
+              <input 
+                type="text" 
+                value={maintMsg} 
+                onChange={(e) => setMaintMsg(e.target.value)} 
+                placeholder="e.g. Server upgrade in progress. Back online in 30 minutes!" 
+              />
+            </div>
           </div>
           
           <button onClick={handleConfigSave} className="nav-btn-primary" style={{ marginTop: '15px', border: 'none', padding: '12px 25px', cursor: 'pointer' }}>
@@ -511,13 +523,13 @@ function AdminPanel({ onNavigate, config }) {
 // ----------------------------------------------------
 // SERVER MAINTENANCE LOCK OVERLAY COMPONENT
 // ----------------------------------------------------
-function MaintenanceScreen() {
+function MaintenanceScreen({ message }) {
   return (
     <div className="maintenance-body">
       <div className="maintenance-screen">
         <span className="maint-icon">⚙️</span>
         <h2>Server Maintenance Active</h2>
-        <p>N8 G Tools servers are currently undergoing upgrades. We will be back shortly!</p>
+        <p>{message || "N8 G Tools servers are currently undergoing upgrades. We will be back shortly!"}</p>
         <div className="booster-circle" style={{ borderColor: 'var(--cyan)', color: 'var(--cyan)', margin: '25px auto 0 auto', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '11px' }}>
           UPGRADE
         </div>
