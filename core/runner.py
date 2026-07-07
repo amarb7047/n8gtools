@@ -98,7 +98,7 @@ class MirrorRunner:
         except Exception as e:
             return False, f"Failed to launch scrcpy: {e}"
 
-    def start_ios_mirror(self, fps="60", resolution="1920x1080", vsync=True, audio_delay="0.25"):
+    def start_ios_mirror(self, fps="60", resolution="1920x1080", vsync=True, audio_delay="0.25", audio_enabled=True):
         """Launches uxplay AirPlay server."""
         uxplay_exe = self.downloader.get_uxplay_path()
         if not uxplay_exe:
@@ -125,6 +125,9 @@ class MirrorRunner:
             
         if audio_delay:
             cmd += ["-al", audio_delay]
+
+        if not audio_enabled:
+            cmd += ["-a"]
 
         # Run process on Windows hiding the console window but keeping the GUI window visible
         creationflags = 0

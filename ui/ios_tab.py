@@ -93,10 +93,14 @@ class IosTab(QWidget):
         self.sync_check = QCheckBox("Enable Audio-Video Sync (V-Sync)")
         self.sync_check.setChecked(False)
 
+        self.audio_check = QCheckBox("Mute AirPlay Audio (Stream Video Only - Fixes Game Crashes)")
+        self.audio_check.setChecked(False)
+
         config_layout.addRow("Mirroring Resolution:", self.res_combo)
         config_layout.addRow("Frame Rate Suggestion:", self.fps_combo)
         config_layout.addRow("Audio Buffer Latency:", self.audio_delay_combo)
         config_layout.addRow("", self.sync_check)
+        config_layout.addRow("", self.audio_check)
 
         left_layout.addWidget(config_group)
 
@@ -218,7 +222,7 @@ class IosTab(QWidget):
             pass
 
     def _parse_settings(self):
-        """Parse current UI combo selections and return (res, fps, vsync, audio_delay)."""
+        """Parse current UI combo selections and return (res, fps, vsync, audio_delay, audio_enabled)."""
         res_text = self.res_combo.currentText()
         if "3840" in res_text:
             res = "3840x2160"
@@ -247,20 +251,21 @@ class IosTab(QWidget):
         }
         audio_delay = delay_map.get(self.audio_delay_combo.currentText(), "0.25")
         vsync = self.sync_check.isChecked()
-        return res, fps, vsync, audio_delay
+        audio_enabled = not self.audio_check.isChecked()
+        return res, fps, vsync, audio_delay, audio_enabled
 
     def start_server_silent(self):
-        res, fps, vsync, audio_delay = self._parse_settings()
+        res, fps, vsync, audio_delay, audio_enabled = self._parse_settings()
         self.status_label.setText("Auto-Starting Server (USB)...")
         success, msg = self.runner.start_ios_mirror(
-            fps=fps, resolution=res, vsync=vsync, audio_delay=audio_delay)
+            fps=fps, resolution=res, vsync=vsync, audio_delay=audio_delay, audio_enabled=audio_enabled)
 
         if success:
             self.launch_btn.setText("STOP AIRPLAY SERVER")
             self.launch_btn.setObjectName("btnStop")
             self.launch_btn.setStyle(self.launch_btn.style())
             self.status_label.setText(
-                "Status: Server Online (USB Auto). Open Control Center > Screen Mirroring > UxPlay")
+                "Status: Server Online (USB Auto). Open Control Center > Screen Mirroring > N8 G Tools")
         else:
             self.status_label.setText(f"Status: Auto-Launch failed: {msg}")
 
@@ -285,17 +290,17 @@ class IosTab(QWidget):
                     "Apple Bonjour Service is missing. Please setup drivers in Setup tab.")
                 return
 
-            res, fps, vsync, audio_delay = self._parse_settings()
+            res, fps, vsync, audio_delay, audio_enabled = self._parse_settings()
             self.status_label.setText("Starting Server...")
             success, msg = self.runner.start_ios_mirror(
-                fps=fps, resolution=res, vsync=vsync, audio_delay=audio_delay)
+                fps=fps, resolution=res, vsync=vsync, audio_delay=audio_delay, audio_enabled=audio_enabled)
 
             if success:
                 self.launch_btn.setText("STOP AIRPLAY SERVER")
                 self.launch_btn.setObjectName("btnStop")
                 self.launch_btn.setStyle(self.launch_btn.style())
                 self.status_label.setText(
-                    "Status: Server Online. Open Control Center > Screen Mirroring > UxPlay")
+                    "Status: Server Online. Open Control Center > Screen Mirroring > N8 G Tools")
             else:
                 QMessageBox.critical(
                     self, "Server Error", f"Failed to start server: {msg}")
