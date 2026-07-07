@@ -242,6 +242,29 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
+        # Update the taskbar and titlebar icons of running scrcpy and uxplay windows at runtime
+        try:
+            import win32gui
+            import win32con
+            import os
+            icon_path = os.path.join(self.base_dir, "logo.ico")
+            if os.path.exists(icon_path):
+                hicon = win32gui.LoadImage(
+                    None, icon_path, win32con.IMAGE_ICON,
+                    0, 0, win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE
+                )
+                
+                def callback(hwnd, extra):
+                    title = win32gui.GetWindowText(hwnd)
+                    if any(term in title for term in ["N8 G Tools Android Mirror", "AirPlay Video Stream", "UxPlay"]):
+                        win32gui.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_SMALL, hicon)
+                        win32gui.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_BIG, hicon)
+                    return True
+                
+                win32gui.EnumWindows(callback, None)
+        except Exception:
+            pass
+
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_F11:
             self.toggle_fullscreen()

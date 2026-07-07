@@ -55,6 +55,9 @@ class MirrorRunner:
         # Build command list
         cmd = [scrcpy_exe, "--window-title", "N8 G Tools Android Mirror"]
         
+        # Optimize performance: force hardware-accelerated H.264 and disable buffering
+        cmd += ["--video-codec=h264", "--video-buffer=0"]
+        
         if serial:
             cmd += ["--serial", serial]
             
@@ -104,8 +107,8 @@ class MirrorRunner:
         if not self.downloader.is_bonjour_installed():
             return False, "Apple Bonjour Service is required for AirPlay discovery."
 
-        # Build command list
-        cmd = [uxplay_exe, "-nh"]
+        # Build command list - Set network name to N8 G Tools
+        cmd = [uxplay_exe, "-n", "N8 G Tools", "-nh"]
         
         # On Windows, use Direct3D 11 hardware-accelerated video rendering for maximum smoothness
         if os.name == 'nt':

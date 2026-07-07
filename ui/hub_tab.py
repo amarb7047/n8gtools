@@ -151,7 +151,7 @@ class HubTab(QWidget):
         credits_layout = QVBoxLayout(credits_box)
         credits_layout.setSpacing(5)
         
-        ver_label = QLabel("Build Version: 1.0.2 (Stable Edition)")
+        ver_label = QLabel("Build Version: 1.0.3 (Stable Edition)")
         ver_label.setStyleSheet("color: #8E9AAF; font-size: 11px;")
         credits_layout.addWidget(ver_label)
         
