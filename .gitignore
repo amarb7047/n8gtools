@@ -12,3 +12,9 @@ uxplay-win64/
 .vscode/
 .idea/
 local_stats.json
+
+# Firebase configuration & settings files
+.firebase/
+.firebaserc
+firebase.json
+website/src/firebase.js
