@@ -109,6 +109,12 @@ class InstallThread(QThread):
             try:
                 subprocess.run(["taskkill", "/F", "/T", "/IM", "N8GTools.exe"], 
                                shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                subprocess.run(["taskkill", "/F", "/T", "/IM", "uxplay.exe"], 
+                               shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                subprocess.run(["taskkill", "/F", "/T", "/IM", "scrcpy.exe"], 
+                               shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                subprocess.run(["taskkill", "/F", "/T", "/IM", "adb.exe"], 
+                               shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             except Exception:
                 pass
             import time
@@ -201,7 +207,7 @@ class InstallThread(QThread):
             
             # Set values
             winreg.SetValueEx(key, "DisplayName", 0, winreg.REG_SZ, "N8 G Tools")
-            winreg.SetValueEx(key, "DisplayVersion", 0, winreg.REG_SZ, "1.0.3")
+            winreg.SetValueEx(key, "DisplayVersion", 0, winreg.REG_SZ, "1.0.4")
             winreg.SetValueEx(key, "Publisher", 0, winreg.REG_SZ, "N8 G Tools Team")
             winreg.SetValueEx(key, "DisplayIcon", 0, winreg.REG_SZ, ico_path)
             

@@ -6,7 +6,7 @@ export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [config, setConfig] = useState({
     maintenance: false,
-    version: "1.0.3",
+    version: "1.0.4",
     download_url: "https://github.com/amarb7047/n8gtools/releases/download/v1.0.0/N8GTools_Setup.exe",
     maintenance_msg: "N8 G Tools servers are currently undergoing upgrades. We will be back shortly!"
   });
@@ -22,7 +22,7 @@ export default function App() {
         // Initialize default config if database is empty
         set(configRef, {
           maintenance: false,
-          version: "1.0.3",
+          version: "1.0.4",
           download_url: "https://github.com/amarb7047/n8gtools/releases/download/v1.0.0/N8GTools_Setup.exe",
           maintenance_msg: "N8 G Tools servers are currently undergoing upgrades. We will be back shortly!"
         });
