@@ -6,9 +6,25 @@ import subprocess
 import threading
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QComboBox, QLineEdit, QGroupBox, 
-                             QFormLayout, QFileDialog, QPlainTextEdit, QMessageBox, QTabWidget, QTextBrowser, QScrollArea, QFrame)
+                             QFormLayout, QFileDialog, QPlainTextEdit, QMessageBox, 
+                             QTabWidget, QTextBrowser, QScrollArea, QFrame, QDialog, 
+                             QListWidget, QListWidgetItem, QDialogButtonBox)
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QThread
 from core.mi_unlock import MiUnlockSession
+
+COMMON_BLOATWARE_PACKAGES = [
+    # Xiaomi
+    "com.miui.analytics", "com.miui.daemon", "com.miui.hybrid", "com.miui.msa.global",
+    "com.xiaomi.discover", "com.xiaomi.mipicks", "com.xiaomi.payment", "com.miui.yellowpage",
+    # Realme / Oppo
+    "com.heytap.browser", "com.heytap.themestore", "com.heytap.usercenter",
+    "com.coloros.gamespace", "com.oppo.market", "com.oppo.usercenter",
+    # Samsung
+    "com.samsung.android.bixby.agent", "com.samsung.android.bixby.wakeup",
+    "com.samsung.android.kidsinstaller", "com.samsung.android.spay", "com.samsung.android.app.spage",
+    # Generic junk
+    "com.facebook.services", "com.facebook.system", "com.facebook.appmanager"
+]
 
 class FlasherThread(QThread):
     log_signal = pyqtSignal(str)
@@ -346,6 +362,116 @@ class FlasherThread(QThread):
                 else:
                     self.finished_signal.emit(False, "FRP Erase failed. Ensure your device is connected in Fastboot mode with an unlocked bootloader.")
 
+            elif self.action_type == "install_apk_batch":
+                apk_paths = self.params["apk_paths"]
+                adb_path = self.params["adb_path"]
+                serial = self.params["serial"]
+                
+                if not serial:
+                    self.finished_signal.emit(False, "Error: No device connected.")
+                    return
+                    
+                self.log_signal.emit(f"Starting batch APK installation on device {serial}...")
+                success_count = 0
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = subprocess.SW_HIDE
+                
+                for i, path in enumerate(apk_paths):
+                    filename = os.path.basename(path)
+                    self.log_signal.emit(f"[{i+1}/{len(apk_paths)}] Installing {filename}...")
+                    cmd = [adb_path, "-s", serial, "install", "-r", path]
+                    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, startupinfo=startupinfo)
+                    stdout, stderr = proc.communicate()
+                    if proc.returncode == 0:
+                        self.log_signal.emit(f"Successfully installed {filename}!")
+                        success_count += 1
+                    else:
+                        self.log_signal.emit(f"Failed to install {filename}: {stdout} {stderr}")
+                        
+                self.finished_signal.emit(True, f"Batch installation finished. Installed {success_count}/{len(apk_paths)} APKs successfully.")
+
+            elif self.action_type == "uninstall_bloatware":
+                packages = self.params["packages"]
+                adb_path = self.params["adb_path"]
+                serial = self.params["serial"]
+                
+                if not serial:
+                    self.finished_signal.emit(False, "Error: No device connected.")
+                    return
+                    
+                self.log_signal.emit(f"Uninstalling {len(packages)} bloatware packages from device {serial}...")
+                success_count = 0
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = subprocess.SW_HIDE
+                
+                for i, pkg in enumerate(packages):
+                    self.log_signal.emit(f"[{i+1}/{len(packages)}] Removing {pkg}...")
+                    cmd = [adb_path, "-s", serial, "shell", "pm", "uninstall", "-k", "--user", "0", pkg]
+                    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, startupinfo=startupinfo)
+                    stdout, stderr = proc.communicate()
+                    if "Success" in stdout or proc.returncode == 0:
+                        self.log_signal.emit(f"Successfully uninstalled {pkg}")
+                        success_count += 1
+                    else:
+                        self.log_signal.emit(f"Failed to uninstall {pkg}: {stdout} {stderr}".strip())
+                        
+                self.finished_signal.emit(True, f"Debloater finished. Removed {success_count}/{len(packages)} packages.")
+
+            elif self.action_type == "get_battery_diagnostics":
+                adb_path = self.params["adb_path"]
+                serial = self.params["serial"]
+                
+                if not serial:
+                    self.finished_signal.emit(False, "Error: No device connected.")
+                    return
+                    
+                self.log_signal.emit("Fetching deep battery diagnostics from device...")
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = subprocess.SW_HIDE
+                
+                cmd = [adb_path, "-s", serial, "shell", "dumpsys", "battery"]
+                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, startupinfo=startupinfo)
+                stdout, stderr = proc.communicate()
+                
+                if proc.returncode == 0:
+                    self.log_signal.emit("--- BATTERY TELEMETRY REPORT ---")
+                    self.log_signal.emit(stdout)
+                    lines = stdout.splitlines()
+                    battery_info = {}
+                    for line in lines:
+                         if ":" in line:
+                             parts = line.split(":", 1)
+                             key = parts[0].strip()
+                             val = parts[1].strip()
+                             battery_info[key] = val
+                    
+                    report = "🔋 <b>Battery Diagnostics:</b><br><br>"
+                    report += f"● <b>AC Charger Online:</b> {battery_info.get('AC powered', 'false')}<br>"
+                    report += f"● <b>USB Charger Online:</b> {battery_info.get('USB powered', 'false')}<br>"
+                    report += f"● <b>Wireless Online:</b> {battery_info.get('Wireless powered', 'false')}<br>"
+                    
+                    status_val = battery_info.get('status', '2')
+                    status_map = {"1": "Unknown", "2": "Charging", "3": "Discharging", "4": "Not Charging", "5": "Full"}
+                    status_text = status_map.get(status_val, f"Code {status_val}")
+                    
+                    health_val = battery_info.get('health', '2')
+                    health_map = {"1": "Unknown", "2": "Good", "3": "Overheat", "4": "Dead", "5": "Over Voltage", "6": "Unspecified Failure", "7": "Cold"}
+                    health_text = health_map.get(health_val, f"Code {health_val}")
+                    
+                    report += f"● <b>Status:</b> {status_text}<br>"
+                    report += f"● <b>Health State:</b> {health_text}<br>"
+                    report += f"● <b>Charge Level:</b> {battery_info.get('level', 'Unknown')}%<br>"
+                    report += f"● <b>Voltage:</b> {float(battery_info.get('voltage', 0)) / 1000.0 if battery_info.get('voltage') else 'Unknown'} V<br>"
+                    report += f"● <b>Temperature:</b> {float(battery_info.get('temperature', 0)) / 10.0 if battery_info.get('temperature') else 'Unknown'} °C<br>"
+                    report += f"● <b>Technology:</b> {battery_info.get('technology', 'Unknown')}<br>"
+                    
+                    self.finished_signal.emit(True, report)
+                else:
+                    self.finished_signal.emit(False, f"Failed to retrieve battery stats: {stderr}")
+
         except Exception as e:
             self.finished_signal.emit(False, f"Error during execution: {str(e)}")
 
@@ -463,6 +589,7 @@ class FlasherTab(QWidget):
         self.create_fastboot_tab()
         self.create_recovery_tab()
         self.create_repair_tab()
+        self.create_tech_suite_tab()
         self.create_guides_tab()
         
         main_layout.addWidget(self.sub_tabs)
@@ -1571,6 +1698,187 @@ class FlasherTab(QWidget):
             "serial": self.detected_serial
         }
         self.launch_worker("wipe_efs", params)
+
+    def create_tech_suite_tab(self):
+        self.tech_suite_tab = QWidget()
+        layout = QVBoxLayout(self.tech_suite_tab)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+
+        # 1. Batch APK Installer Group
+        apk_group = QGroupBox("Batch APK Sideload Installer")
+        apk_group.setObjectName("settingsGroup")
+        apk_layout = QVBoxLayout(apk_group)
+        apk_layout.setSpacing(10)
+        
+        apk_info = QLabel("Select multiple APK files from your PC to install them to the connected device concurrently.")
+        apk_info.setStyleSheet("color: #8E9AAF; font-size: 12px;")
+        apk_layout.addWidget(apk_info)
+        
+        apk_btn_layout = QHBoxLayout()
+        self.btn_select_apks = QPushButton("Select & Install APKs")
+        self.btn_select_apks.setObjectName("btnAction")
+        self.btn_select_apks.clicked.connect(self.run_batch_apk_install)
+        self.btn_select_apks.setCursor(Qt.PointingHandCursor)
+        apk_btn_layout.addWidget(self.btn_select_apks)
+        apk_btn_layout.addStretch()
+        apk_layout.addLayout(apk_btn_layout)
+        layout.addWidget(apk_group)
+
+        # 2. ADB System Debloater Group
+        debloat_group = QGroupBox("ADB System Debloater (Junk & Bloatware Remover)")
+        debloat_group.setObjectName("settingsGroup")
+        debloat_layout = QVBoxLayout(debloat_group)
+        debloat_layout.setSpacing(10)
+        
+        debloat_info = QLabel("Scan for pre-installed manufacturer bloatware/trackers on the connected device and uninstall them instantly.")
+        debloat_info.setStyleSheet("color: #8E9AAF; font-size: 12px;")
+        debloat_layout.addWidget(debloat_info)
+        
+        debloat_btn_layout = QHBoxLayout()
+        self.btn_scan_bloatware = QPushButton("Scan & Uninstall Bloatware")
+        self.btn_scan_bloatware.setObjectName("btnAction")
+        self.btn_scan_bloatware.clicked.connect(self.run_debloater_action)
+        self.btn_scan_bloatware.setCursor(Qt.PointingHandCursor)
+        debloat_btn_layout.addWidget(self.btn_scan_bloatware)
+        debloat_btn_layout.addStretch()
+        debloat_layout.addLayout(debloat_btn_layout)
+        layout.addWidget(debloat_group)
+
+        # 3. Battery Diagnostics Group
+        battery_group = QGroupBox("Battery Diagnostics & Telemetry Scanner")
+        battery_group.setObjectName("settingsGroup")
+        battery_layout = QVBoxLayout(battery_group)
+        battery_layout.setSpacing(10)
+        
+        battery_info = QLabel("Retrieve charge cycles, health percentage, charging voltage, and live battery telemetry specs.")
+        battery_info.setStyleSheet("color: #8E9AAF; font-size: 12px;")
+        battery_layout.addWidget(battery_info)
+        
+        battery_btn_layout = QHBoxLayout()
+        self.btn_scan_battery = QPushButton("Retrieve Battery Diagnostics")
+        self.btn_scan_battery.setObjectName("btnAction")
+        self.btn_scan_battery.clicked.connect(self.run_battery_diagnostics)
+        self.btn_scan_battery.setCursor(Qt.PointingHandCursor)
+        battery_btn_layout.addWidget(self.btn_scan_battery)
+        battery_btn_layout.addStretch()
+        battery_layout.addLayout(battery_btn_layout)
+        layout.addWidget(battery_group)
+        
+        layout.addStretch()
+        self.sub_tabs.addTab(self.tech_suite_tab, "ADB Tech Suite")
+
+    def run_debloater_action(self):
+        if not self.detected_mode or self.detected_mode == "fastboot":
+            QMessageBox.warning(self, "ADB Connection Required", "Please connect your phone in normal Android mode with USB Debugging enabled.")
+            return
+
+        adb_path = self.runner.get_adb_path()
+        if not adb_path:
+            QMessageBox.warning(self, "Platform Tools Missing", "ADB engine is missing. Install Platform Tools from Setup.")
+            return
+
+        self.txt_console.appendHtml("Scanning for installed bloatware packages...")
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+        
+        proc = subprocess.Popen([adb_path, "-s", self.detected_serial, "shell", "pm", "list", "packages"],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, startupinfo=startupinfo)
+        stdout, stderr = proc.communicate()
+        
+        if proc.returncode != 0:
+            QMessageBox.critical(self, "Scan Failed", f"Failed to list packages: {stderr}")
+            return
+            
+        installed_pkgs = [line.replace("package:", "").strip() for line in stdout.splitlines() if line.startswith("package:")]
+        detected = [pkg for pkg in COMMON_BLOATWARE_PACKAGES if pkg in installed_pkgs]
+        
+        if not detected:
+            QMessageBox.information(self, "Scan Complete", "Congratulations! No common manufacturer bloatware packages were detected on your device.")
+            return
+            
+        dialog = QDialog(self)
+        dialog.setWindowTitle("ADB System Debloater")
+        dialog.setMinimumWidth(450)
+        dialog.setMinimumHeight(450)
+        
+        diag_layout = QVBoxLayout(dialog)
+        diag_layout.addWidget(QLabel(f"<b>Detected Bloatware ({len(detected)}):</b> Select the packages you want to uninstall from the device:"))
+        
+        list_widget = QListWidget()
+        for pkg in detected:
+            item = QListWidgetItem(pkg)
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Checked)
+            list_widget.addItem(item)
+            
+        diag_layout.addWidget(list_widget)
+        
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        diag_layout.addWidget(button_box)
+        
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        
+        if dialog.exec_() == QDialog.Accepted:
+            selected_packages = []
+            for i in range(list_widget.count()):
+                item = list_widget.item(i)
+                if item.checkState() == Qt.Checked:
+                    selected_packages.append(item.text())
+                    
+            if not selected_packages:
+                return
+                
+            params = {
+                "adb_path": adb_path,
+                "serial": self.detected_serial,
+                "packages": selected_packages
+            }
+            self.launch_worker("uninstall_bloatware", params)
+
+    def run_batch_apk_install(self):
+        if not self.detected_mode or self.detected_mode == "fastboot":
+            QMessageBox.warning(self, "ADB Connection Required", "Please connect your phone in normal Android mode with USB Debugging enabled.")
+            return
+
+        adb_path = self.runner.get_adb_path()
+        if not adb_path:
+            QMessageBox.warning(self, "Platform Tools Missing", "ADB engine is missing. Install Platform Tools from Setup.")
+            return
+
+        files, _ = QFileDialog.getOpenFileNames(
+            self, 
+            "Select APK Files for Batch Installation", 
+            "", 
+            "Android Package Files (*.apk)"
+        )
+        if not files:
+            return
+
+        params = {
+            "adb_path": adb_path,
+            "serial": self.detected_serial,
+            "apk_paths": files
+        }
+        self.launch_worker("install_apk_batch", params)
+
+    def run_battery_diagnostics(self):
+        if not self.detected_mode or self.detected_mode == "fastboot":
+            QMessageBox.warning(self, "ADB Connection Required", "Please connect your phone in normal Android mode with USB Debugging enabled.")
+            return
+
+        adb_path = self.runner.get_adb_path()
+        if not adb_path:
+            QMessageBox.warning(self, "Platform Tools Missing", "ADB engine is missing. Install Platform Tools from Setup.")
+            return
+
+        params = {
+            "adb_path": adb_path,
+            "serial": self.detected_serial
+        }
+        self.launch_worker("get_battery_diagnostics", params)
 
     def create_guides_tab(self):
         tab = QWidget()

@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame, QScrollArea
 from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtGui import QDesktopServices, QFont, QPixmap, QPainter, QPainterPath
 import os
@@ -10,7 +10,23 @@ class HubTab(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        layout = QVBoxLayout()
+        # Create an outer main layout
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Create a scroll area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setStyleSheet("background-color: transparent;")
+        
+        # Create a container widget for scroll area
+        container = QWidget()
+        container.setObjectName("tabContainer")
+        container.setStyleSheet("background-color: transparent;")
+        
+        # All our actual layouts go inside this container
+        layout = QVBoxLayout(container)
         layout.setContentsMargins(30, 30, 30, 30)
         layout.setSpacing(20)
 
@@ -83,6 +99,10 @@ class HubTab(QWidget):
         owner_label = QLabel("Owner: Amarendraa Biswas")
         owner_label.setStyleSheet("color: #E2E8F0; font-size: 14px; font-weight: bold;")
         info_layout.addWidget(owner_label)
+
+        gmail_label = QLabel("Email: amarbiswas887@gmail.com")
+        gmail_label.setStyleSheet("color: #66FCF1; font-size: 13px; font-weight: 500;")
+        info_layout.addWidget(gmail_label)
 
         desc_label = QLabel(
             "Welcome to the official utility suite of N8 Gamer! This application was custom-built "
@@ -162,7 +182,8 @@ class HubTab(QWidget):
         layout.addWidget(credits_box)
         layout.addStretch()
 
-        self.setLayout(layout)
+        scroll.setWidget(container)
+        outer_layout.addWidget(scroll)
 
     def open_channel(self):
         url = QUrl("https://youtube.com/@n8gamer70?si=10-ayl3CYBu4LF0a")
