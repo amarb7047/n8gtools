@@ -699,7 +699,7 @@ class FlasherTab(QWidget):
             self.txt_mi_pwd.setText(self.mi_session.pwd)
             self.txt_mi_redirect.setText("Session Cached - Paste new URL only if login expires")
 
-        self.sub_tabs.addTab(tab, "Xiaomi Bootloader Unlock")
+        self.sub_tabs.addTab(tab, "Xiaomi Unlock")
 
     def create_fastboot_tab(self):
         tab = QWidget()
@@ -793,7 +793,7 @@ class FlasherTab(QWidget):
         layout.addWidget(img_box)
         layout.addStretch()
 
-        self.sub_tabs.addTab(tab, "Fastboot Flasher")
+        self.sub_tabs.addTab(tab, "Fastboot Flash")
 
     def create_recovery_tab(self):
         tab = QWidget()
@@ -867,7 +867,7 @@ class FlasherTab(QWidget):
         layout.addWidget(sideload_box)
         layout.addStretch()
 
-        self.sub_tabs.addTab(tab, "Recovery & Sideload")
+        self.sub_tabs.addTab(tab, "Recovery/Sideload")
 
     def create_repair_tab(self):
         tab = QWidget()

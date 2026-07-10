@@ -125,12 +125,13 @@ QTabBar::tab {
     color: #8E9AAF;
     border: 1px solid #1F2833;
     border-bottom: none;
-    padding: 8px 15px;
+    padding: 6px 12px;
+    min-height: 24px;
     font-size: 11px;
     font-weight: 600;
     border-top-left-radius: 6px;
     border-top-right-radius: 6px;
-    margin-right: 2px;
+    margin-right: 6px;
 }
 
 QTabBar::tab:hover {
