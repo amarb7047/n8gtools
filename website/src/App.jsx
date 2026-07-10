@@ -7,7 +7,7 @@ export default function App() {
   const [config, setConfig] = useState({
     maintenance: false,
     version: "1.0.5",
-    download_url: "https://github.com/amarb7047/n8gtools/releases/download/v1.0.0/N8GTools_Setup.exe",
+    download_url: "https://github.com/amarb7047/n8gtools/releases/download/v1.0.5/N8GTools_Setup.exe",
     maintenance_msg: "N8 G Tools servers are currently undergoing upgrades. We will be back shortly!"
   });
 
@@ -23,7 +23,7 @@ export default function App() {
         set(configRef, {
           maintenance: false,
           version: "1.0.5",
-          download_url: "https://github.com/amarb7047/n8gtools/releases/download/v1.0.0/N8GTools_Setup.exe",
+          download_url: "https://github.com/amarb7047/n8gtools/releases/download/v1.0.5/N8GTools_Setup.exe",
           maintenance_msg: "N8 G Tools servers are currently undergoing upgrades. We will be back shortly!"
         });
       }

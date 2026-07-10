@@ -1,6 +1,5 @@
-import os
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                             QPushButton, QProgressBar, QMessageBox)
+                             QPushButton, QProgressBar, QMessageBox, QScrollArea, QFrame)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from core.downloader import EngineDownloader
 
@@ -26,6 +25,12 @@ class SetupWorker(QThread):
                     self.downloader.setup_bonjour(self.progress_callback)
                 elif self.engine_type == "usb_driver":
                     self.downloader.setup_usb_driver(self.progress_callback)
+                elif self.engine_type == "platform_tools":
+                    self.downloader.setup_platform_tools(self.progress_callback)
+                elif self.engine_type == "samsung_driver":
+                    self.downloader.setup_samsung_driver(self.progress_callback)
+                elif self.engine_type == "mtk_driver":
+                    self.downloader.setup_mtk_driver(self.progress_callback)
             elif self.action_type == "uninstall":
                 if self.engine_type == "scrcpy":
                     self.downloader.uninstall_scrcpy(self.progress_callback)
@@ -35,6 +40,12 @@ class SetupWorker(QThread):
                     self.downloader.uninstall_bonjour(self.progress_callback)
                 elif self.engine_type == "usb_driver":
                     self.downloader.uninstall_usb_driver(self.progress_callback)
+                elif self.engine_type == "platform_tools":
+                    self.downloader.uninstall_platform_tools(self.progress_callback)
+                elif self.engine_type == "samsung_driver":
+                    self.downloader.uninstall_samsung_driver(self.progress_callback)
+                elif self.engine_type == "mtk_driver":
+                    self.downloader.uninstall_mtk_driver(self.progress_callback)
             self.finished.emit(self.engine_type, True, "")
         except Exception as e:
             self.finished.emit(self.engine_type, False, str(e))
@@ -53,7 +64,23 @@ class SetupTab(QWidget):
         self.refresh_status()
 
     def init_ui(self):
-        layout = QVBoxLayout()
+        # Create an outer main layout
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Create a scroll area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setStyleSheet("background-color: transparent;")
+        
+        # Create a container widget for scroll area
+        container = QWidget()
+        container.setObjectName("tabContainer")
+        container.setStyleSheet("background-color: transparent;")
+        
+        # All our actual layouts go inside this container
+        layout = QVBoxLayout(container)
         layout.setContentsMargins(30, 30, 30, 30)
         layout.setSpacing(20)
 
@@ -103,10 +130,35 @@ class SetupTab(QWidget):
         )
         cards_layout.addWidget(self.usb_driver_card)
 
+        # 5. Google SDK Platform Tools Card (adb & fastboot)
+        self.platform_tools_card = self.create_engine_card(
+            "Google Platform Tools (ADB & Fastboot)",
+            "Required for Xiaomi bootloader unlock, custom ROM sideloading, and recovery flashing.",
+            "platform_tools"
+        )
+        cards_layout.addWidget(self.platform_tools_card)
+
+        # 6. Samsung Android USB Driver Card
+        self.samsung_driver_card = self.create_engine_card(
+            "Samsung Android Mobile USB Driver",
+            "Required for Odin firmware downloads and Samsung ADB/Fastboot communication.",
+            "samsung_driver"
+        )
+        cards_layout.addWidget(self.samsung_driver_card)
+
+        # 7. MediaTek (MTK) USB VCOM Driver Card
+        self.mtk_driver_card = self.create_engine_card(
+            "MediaTek (MTK) VCOM USB Driver",
+            "Required for MTK hardware exploit bypasses, flashing, and SP Flash Tool communication.",
+            "mtk_driver"
+        )
+        cards_layout.addWidget(self.mtk_driver_card)
+
         layout.addLayout(cards_layout)
         layout.addStretch()
 
-        self.setLayout(layout)
+        scroll.setWidget(container)
+        outer_layout.addWidget(scroll)
 
     def create_engine_card(self, title, desc, engine_type):
         card = QWidget()
@@ -198,6 +250,24 @@ class SetupTab(QWidget):
             self.update_badge("usb_driver", True)
         else:
             self.update_badge("usb_driver", False)
+
+        # Check Platform Tools
+        if self.downloader.get_platform_tools_path():
+            self.update_badge("platform_tools", True)
+        else:
+            self.update_badge("platform_tools", False)
+
+        # Check Samsung Driver
+        if self.downloader.get_samsung_driver_path():
+            self.update_badge("samsung_driver", True)
+        else:
+            self.update_badge("samsung_driver", False)
+
+        # Check MTK Driver
+        if self.downloader.get_mtk_driver_path():
+            self.update_badge("mtk_driver", True)
+        else:
+            self.update_badge("mtk_driver", False)
 
         self.engines_updated.emit()
 

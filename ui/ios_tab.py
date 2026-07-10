@@ -2,7 +2,7 @@ import os
 import subprocess
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QComboBox, QCheckBox, QGroupBox,
-                             QFormLayout, QMessageBox)
+                             QFormLayout, QMessageBox, QScrollArea, QFrame)
 from PyQt5.QtCore import Qt, QTimer
 
 
@@ -20,7 +20,23 @@ class IosTab(QWidget):
         self.refresh_timer.start(3000)
 
     def init_ui(self):
-        layout = QVBoxLayout()
+        # Create an outer main layout
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Create a scroll area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setStyleSheet("background-color: transparent;")
+        
+        # Create a container widget for scroll area
+        container = QWidget()
+        container.setObjectName("tabContainer")
+        container.setStyleSheet("background-color: transparent;")
+        
+        # All our actual layouts go inside this container
+        layout = QVBoxLayout(container)
         layout.setContentsMargins(30, 30, 30, 30)
         layout.setSpacing(20)
 
@@ -171,7 +187,8 @@ class IosTab(QWidget):
         main_h_layout.addWidget(guide_group, 3)
 
         layout.addLayout(main_h_layout)
-        self.setLayout(layout)
+        scroll.setWidget(container)
+        outer_layout.addWidget(scroll)
 
     # ─────────────────────────── Logic Methods ───────────────────────────────
 

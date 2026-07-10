@@ -467,3 +467,249 @@ class EngineDownloader:
             return True
         except Exception as e:
             raise RuntimeError(f"Failed to delete USB driver folder: {e}")
+
+    def get_platform_tools_path(self):
+        """Returns the path to platform-tools directory if installed, otherwise None."""
+        pt_dir = os.path.join(self.engines_dir, "platform-tools")
+        if os.path.exists(pt_dir) and os.path.exists(os.path.join(pt_dir, "fastboot.exe")):
+            return pt_dir
+        return None
+
+    def get_fastboot_path(self):
+        """Returns the path to fastboot.exe if platform-tools is installed, otherwise checks system path."""
+        pt_path = self.get_platform_tools_path()
+        if pt_path:
+            return os.path.join(pt_path, "fastboot.exe")
+        
+        # Check system PATH
+        fb_sys = shutil.which("fastboot")
+        if fb_sys:
+            return fb_sys
+        return None
+
+    def setup_platform_tools(self, progress_callback=None):
+        """Downloads and extracts Google Platform Tools (adb & fastboot)."""
+        zip_path = os.path.join(self.engines_dir, "platform_tools.zip")
+        pt_dir = os.path.join(self.engines_dir, "platform-tools")
+        url = "https://dl.google.com/android/repository/platform-tools-latest-windows.zip"
+        
+        if progress_callback:
+            progress_callback(5, "Downloading Google Platform Tools...")
+            
+        def sub_cb(percent):
+            if progress_callback:
+                scaled = 5 + int(percent * 0.8)
+                progress_callback(scaled, f"Downloading Platform Tools: {percent}%")
+
+        try:
+            self.download_file(url, zip_path, sub_cb)
+            if progress_callback:
+                progress_callback(90, "Extracting files...")
+            
+            # Extract ZIP
+            if os.path.exists(pt_dir):
+                try:
+                    shutil.rmtree(pt_dir)
+                except Exception:
+                    pass
+            
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(self.engines_dir)
+            
+            # Clean up zip
+            try:
+                os.remove(zip_path)
+            except Exception:
+                pass
+            
+            if progress_callback:
+                progress_callback(100, "Google Platform Tools ready!")
+            return True
+        except Exception as e:
+            if os.path.exists(zip_path):
+                try:
+                    os.remove(zip_path)
+                except Exception:
+                    pass
+            raise RuntimeError(f"Error setting up platform-tools: {e}")
+
+    def uninstall_platform_tools(self, progress_callback=None):
+        """Uninstalls Google Platform Tools (deletes the folder)."""
+        pt_dir = os.path.join(self.engines_dir, "platform-tools")
+        if progress_callback:
+            progress_callback(50, "Deleting platform-tools files...")
+        try:
+            if os.path.exists(pt_dir):
+                shutil.rmtree(pt_dir)
+            if progress_callback:
+                progress_callback(100, "Google Platform Tools uninstalled!")
+            return True
+        except Exception as e:
+            raise RuntimeError(f"Failed to delete platform-tools folder: {e}")
+
+    def get_samsung_driver_path(self):
+        """Returns the Samsung driver directory if setup, otherwise None."""
+        drv_dir = os.path.join(self.engines_dir, "samsung_driver")
+        if os.path.exists(drv_dir) and len(os.listdir(drv_dir)) > 0:
+            return drv_dir
+        return None
+
+    def setup_samsung_driver(self, progress_callback=None):
+        """Downloads, extracts and runs the Samsung Mobile USB Driver installer silently."""
+        zip_path = os.path.join(self.engines_dir, "samsung_driver.zip")
+        drv_dir = os.path.join(self.engines_dir, "samsung_driver")
+        url = "https://github.com/kdrag0n/fastboot-drivers/releases/download/v1.0/Samsung_Android_USB_Driver.zip"
+
+        if progress_callback:
+            progress_callback(5, "Downloading Samsung Mobile USB Driver...")
+
+        def sub_cb(percent):
+            if progress_callback:
+                scaled = 5 + int(percent * 0.7)
+                progress_callback(scaled, f"Downloading Samsung Driver: {percent}%")
+
+        try:
+            self.download_file(url, zip_path, sub_cb)
+            if progress_callback:
+                progress_callback(80, "Extracting installation package...")
+
+            if os.path.exists(drv_dir):
+                try: shutil.rmtree(drv_dir)
+                except: pass
+            os.makedirs(drv_dir, exist_ok=True)
+
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(drv_dir)
+
+            try: os.remove(zip_path)
+            except: pass
+
+            if progress_callback:
+                progress_callback(90, "Running Samsung Driver Installer (Accept Admin UAC prompt)...")
+
+            # Look for .exe file inside the extracted directory
+            exe_file = None
+            for root, dirs, files in os.walk(drv_dir):
+                for f in files:
+                    if f.endswith(".exe"):
+                        exe_file = os.path.join(root, f)
+                        break
+            
+            if exe_file:
+                # Run Samsung installer with silent flag /S
+                import ctypes
+                res = ctypes.windll.shell32.ShellExecuteW(
+                    None, "runas", exe_file, "/S", None, 1
+                )
+                if int(res) <= 32:
+                    raise RuntimeError("UAC permission denied or installer failed.")
+            else:
+                raise FileNotFoundError("Samsung driver installer executable (.exe) not found in zip.")
+
+            if progress_callback:
+                progress_callback(100, "Samsung Mobile USB Driver installed!")
+            return True
+        except Exception as e:
+            if os.path.exists(zip_path):
+                try: os.remove(zip_path)
+                except: pass
+            raise RuntimeError(f"Error setting up Samsung Driver: {e}")
+
+    def uninstall_samsung_driver(self, progress_callback=None):
+        """Removes extracted Samsung Driver folders."""
+        drv_dir = os.path.join(self.engines_dir, "samsung_driver")
+        if progress_callback:
+            progress_callback(50, "Removing driver package...")
+        try:
+            if os.path.exists(drv_dir):
+                shutil.rmtree(drv_dir)
+            if progress_callback:
+                progress_callback(100, "Samsung Driver package removed!")
+            return True
+        except Exception as e:
+            raise RuntimeError(f"Failed to remove Samsung driver: {e}")
+
+    def get_mtk_driver_path(self):
+        """Returns MTK driver directory if setup, otherwise None."""
+        drv_dir = os.path.join(self.engines_dir, "mtk_driver")
+        if os.path.exists(drv_dir) and len(os.listdir(drv_dir)) > 0:
+            return drv_dir
+        return None
+
+    def setup_mtk_driver(self, progress_callback=None):
+        """Downloads, extracts and registers MediaTek (MTK) USB VCOM drivers."""
+        zip_path = os.path.join(self.engines_dir, "mtk_driver.zip")
+        drv_dir = os.path.join(self.engines_dir, "mtk_driver")
+        url = "https://github.com/MTK-bypass/bypass_utility/releases/download/v1.4.1/mtk_driver.zip"
+
+        if progress_callback:
+            progress_callback(5, "Downloading MediaTek (MTK) VCOM Driver...")
+
+        def sub_cb(percent):
+            if progress_callback:
+                scaled = 5 + int(percent * 0.7)
+                progress_callback(scaled, f"Downloading MTK Driver: {percent}%")
+
+        try:
+            self.download_file(url, zip_path, sub_cb)
+            if progress_callback:
+                progress_callback(80, "Extracting drivers package...")
+
+            if os.path.exists(drv_dir):
+                try: shutil.rmtree(drv_dir)
+                except: pass
+            os.makedirs(drv_dir, exist_ok=True)
+
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(drv_dir)
+
+            try: os.remove(zip_path)
+            except: pass
+
+            if progress_callback:
+                progress_callback(90, "Installing MTK Drivers (Accept Admin UAC prompts)...")
+
+            # Install all .inf driver files recursively using pnputil
+            success = self.install_inf_drivers(drv_dir)
+            if not success:
+                raise RuntimeError("Failed to install one or more MTK Driver inf packages.")
+
+            if progress_callback:
+                progress_callback(100, "MediaTek VCOM USB Driver installed!")
+            return True
+        except Exception as e:
+            if os.path.exists(zip_path):
+                try: os.remove(zip_path)
+                except: pass
+            raise RuntimeError(f"Error setting up MediaTek Driver: {e}")
+
+    def uninstall_mtk_driver(self, progress_callback=None):
+        """Removes extracted MTK driver folders."""
+        drv_dir = os.path.join(self.engines_dir, "mtk_driver")
+        if progress_callback:
+            progress_callback(50, "Removing driver package...")
+        try:
+            if os.path.exists(drv_dir):
+                shutil.rmtree(drv_dir)
+            if progress_callback:
+                progress_callback(100, "MTK Driver package removed!")
+            return True
+        except Exception as e:
+            raise RuntimeError(f"Failed to remove MTK driver: {e}")
+
+    def install_inf_drivers(self, folder_path):
+        """Finds all .inf files in folder_path and registers/installs them using pnputil."""
+        import ctypes
+        success = True
+        for root, dirs, files in os.walk(folder_path):
+            for file in files:
+                if file.endswith(".inf"):
+                    inf_path = os.path.join(root, file)
+                    res = ctypes.windll.shell32.ShellExecuteW(
+                        None, "runas", "pnputil.exe", f'/add-driver "{inf_path}" /install', None, 1
+                    )
+                    if int(res) <= 32:
+                        success = False
+        return success
+
+

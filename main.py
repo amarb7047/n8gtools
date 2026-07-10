@@ -24,30 +24,30 @@ QFrame#sidebar {
 QWidget#logoContainer {
     background-color: transparent;
     border-bottom: 1px solid #1F2430;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
 }
 
 QLabel#logoTitle {
     color: #66FCF1;
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 800;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
 }
 
 QLabel#logoSubtitle {
     color: #8E9AAF;
-    font-size: 10px;
+    font-size: 8px;
     font-weight: bold;
-    letter-spacing: 3px;
+    letter-spacing: 2px;
 }
 
 QPushButton#sidebarBtn, QPushButton#sidebarBtnActive {
     border: none;
     text-align: left;
-    padding-left: 20px;
-    font-size: 14px;
+    padding-left: 15px;
+    font-size: 13px;
     font-weight: 500;
-    margin: 2px 10px;
+    margin: 1px 10px;
     border-radius: 6px;
 }
 
@@ -69,21 +69,39 @@ QPushButton#sidebarBtnActive {
 
 /* Indicators */
 QFrame#statusPanel {
-    background-color: #161925;
+    background-color: #0B0C10;
     border-top: 1px solid #1F2430;
     border-radius: 0px;
 }
 
-QLabel#indReady {
+QPushButton#btnSystemStatusChecking {
+    background-color: #1A1F2C;
+    border: 1px solid #94A3B8;
+    color: #94A3B8;
+    font-weight: 600;
+    font-size: 11px;
+    border-radius: 5px;
+    padding: 5px;
+}
+
+QPushButton#btnSystemStatusReady {
+    background-color: #122215;
+    border: 1px solid #2ECC71;
     color: #2ECC71;
     font-weight: 600;
     font-size: 11px;
+    border-radius: 5px;
+    padding: 5px;
 }
 
-QLabel#indMissing {
+QPushButton#btnSystemStatusMissing {
+    background-color: #2D1A1A;
+    border: 1px solid #E74C3C;
     color: #E74C3C;
     font-weight: 600;
     font-size: 11px;
+    border-radius: 5px;
+    padding: 5px;
 }
 
 /* Tab Content Styling */

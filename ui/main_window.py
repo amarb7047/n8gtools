@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLabel, QPushButton, QStackedWidget, QFrame,
-                             QProgressBar, QGroupBox)
+                             QProgressBar, QGroupBox, QMessageBox)
 from PyQt5.QtCore import Qt, QTimer
 from ui.android_tab import AndroidTab
 from ui.ios_tab import IosTab
@@ -10,6 +10,7 @@ from ui.hub_tab import HubTab
 from ui.booster_tab import BoosterTab
 from ui.sys_info_tab import SysInfoTab
 from ui.maintenance_tab import MaintenanceTab
+from ui.flasher_tab import FlasherTab
 from PyQt5.QtCore import QThread, pyqtSignal
 
 class MainWindow(QMainWindow):
@@ -64,7 +65,7 @@ class MainWindow(QMainWindow):
         logo_container = QWidget()
         logo_container.setObjectName("logoContainer")
         logo_layout = QVBoxLayout(logo_container)
-        logo_layout.setContentsMargins(20, 20, 20, 20)
+        logo_layout.setContentsMargins(15, 10, 15, 10)
         
         logo_title = QLabel("N8 G Tools")
         logo_title.setObjectName("logoTitle")
@@ -78,73 +79,76 @@ class MainWindow(QMainWindow):
         
         sidebar_layout.addWidget(logo_container)
 
-        # Navigation Buttons
+        # Navigation Buttons (height reduced to 38px for a compact premium look)
         self.btn_android = QPushButton("  Android Console")
         self.btn_android.setObjectName("sidebarBtnActive") # Initial active button
-        self.btn_android.setMinimumHeight(50)
+        self.btn_android.setMinimumHeight(38)
         self.btn_android.setCursor(Qt.PointingHandCursor)
         self.btn_android.clicked.connect(lambda: self.switch_tab(0, self.btn_android))
         sidebar_layout.addWidget(self.btn_android)
 
         self.btn_ios = QPushButton("  iOS AirPlay")
         self.btn_ios.setObjectName("sidebarBtn")
-        self.btn_ios.setMinimumHeight(50)
+        self.btn_ios.setMinimumHeight(38)
         self.btn_ios.setCursor(Qt.PointingHandCursor)
         self.btn_ios.clicked.connect(lambda: self.switch_tab(1, self.btn_ios))
         sidebar_layout.addWidget(self.btn_ios)
 
         self.btn_obs = QPushButton("  OBS Stream Guide")
         self.btn_obs.setObjectName("sidebarBtn")
-        self.btn_obs.setMinimumHeight(50)
+        self.btn_obs.setMinimumHeight(38)
         self.btn_obs.setCursor(Qt.PointingHandCursor)
         self.btn_obs.clicked.connect(lambda: self.switch_tab(2, self.btn_obs))
         sidebar_layout.addWidget(self.btn_obs)
 
         self.btn_setup = QPushButton("  Setup & Drivers")
         self.btn_setup.setObjectName("sidebarBtn")
-        self.btn_setup.setMinimumHeight(50)
+        self.btn_setup.setMinimumHeight(38)
         self.btn_setup.setCursor(Qt.PointingHandCursor)
         self.btn_setup.clicked.connect(lambda: self.switch_tab(3, self.btn_setup))
         sidebar_layout.addWidget(self.btn_setup)
 
         self.btn_hub = QPushButton("  N8 Gamer Hub")
         self.btn_hub.setObjectName("sidebarBtn")
-        self.btn_hub.setMinimumHeight(50)
+        self.btn_hub.setMinimumHeight(38)
         self.btn_hub.setCursor(Qt.PointingHandCursor)
         self.btn_hub.clicked.connect(lambda: self.switch_tab(4, self.btn_hub))
         sidebar_layout.addWidget(self.btn_hub)
 
         self.btn_booster = QPushButton("  Game Booster")
         self.btn_booster.setObjectName("sidebarBtn")
-        self.btn_booster.setMinimumHeight(50)
+        self.btn_booster.setMinimumHeight(38)
         self.btn_booster.setCursor(Qt.PointingHandCursor)
         self.btn_booster.clicked.connect(lambda: self.switch_tab(5, self.btn_booster))
         sidebar_layout.addWidget(self.btn_booster)
 
         self.btn_sys_info = QPushButton("  System Info")
         self.btn_sys_info.setObjectName("sidebarBtn")
-        self.btn_sys_info.setMinimumHeight(50)
+        self.btn_sys_info.setMinimumHeight(38)
         self.btn_sys_info.setCursor(Qt.PointingHandCursor)
         self.btn_sys_info.clicked.connect(lambda: self.switch_tab(6, self.btn_sys_info))
         sidebar_layout.addWidget(self.btn_sys_info)
 
-        # Engine Status Indicators at bottom of Sidebar
+        self.btn_flasher = QPushButton("  All-in-One Flasher")
+        self.btn_flasher.setObjectName("sidebarBtn")
+        self.btn_flasher.setMinimumHeight(38)
+        self.btn_flasher.setCursor(Qt.PointingHandCursor)
+        self.btn_flasher.clicked.connect(lambda: self.switch_tab(7, self.btn_flasher))
+        sidebar_layout.addWidget(self.btn_flasher)
+
+        # Compact Status Indicator Button at bottom of Sidebar
         status_panel = QFrame()
         status_panel.setObjectName("statusPanel")
         status_layout = QVBoxLayout(status_panel)
-        status_layout.setContentsMargins(15, 15, 15, 15)
-        status_layout.setSpacing(8)
+        status_layout.setContentsMargins(10, 10, 10, 10)
+        status_layout.setSpacing(5)
 
-        self.android_indicator = QLabel("● Android Engine: Missing")
-        self.android_indicator.setObjectName("indMissing")
-        self.ios_indicator = QLabel("● iOS Engine: Missing")
-        self.ios_indicator.setObjectName("indMissing")
-        self.bonjour_indicator = QLabel("● Bonjour Service: Missing")
-        self.bonjour_indicator.setObjectName("indMissing")
-
-        status_layout.addWidget(self.android_indicator)
-        status_layout.addWidget(self.ios_indicator)
-        status_layout.addWidget(self.bonjour_indicator)
+        self.btn_system_status = QPushButton("● System Status: Checking...")
+        self.btn_system_status.setObjectName("btnSystemStatusChecking")
+        self.btn_system_status.setCursor(Qt.PointingHandCursor)
+        self.btn_system_status.setMinimumHeight(32)
+        self.btn_system_status.clicked.connect(self.show_engine_status_details)
+        status_layout.addWidget(self.btn_system_status)
 
         sidebar_layout.addWidget(status_panel)
         main_layout.addWidget(self.sidebar, 1)
@@ -161,6 +165,7 @@ class MainWindow(QMainWindow):
         self.hub_tab = HubTab(self.base_dir)
         self.booster_tab = BoosterTab()
         self.sys_info_tab = SysInfoTab()
+        self.flasher_tab = FlasherTab(self.runner, self.monitor)
         
         # Connect signal to update indicators when setup changes
         self.setup_tab.engines_updated.connect(self.update_sidebar_indicators)
@@ -173,14 +178,15 @@ class MainWindow(QMainWindow):
         self.stacked_widget.addWidget(self.hub_tab)     # Index 4
         self.stacked_widget.addWidget(self.booster_tab) # Index 5
         self.stacked_widget.addWidget(self.sys_info_tab) # Index 6
+        self.stacked_widget.addWidget(self.flasher_tab)  # Index 7
         
         self.maintenance_tab = MaintenanceTab()
-        self.stacked_widget.addWidget(self.maintenance_tab) # Index 7
+        self.stacked_widget.addWidget(self.maintenance_tab) # Index 8
 
         main_layout.addWidget(self.stacked_widget, 4)
 
         # Store button list for handling active state toggling
-        self.nav_buttons = [self.btn_android, self.btn_ios, self.btn_obs, self.btn_setup, self.btn_hub, self.btn_booster, self.btn_sys_info]
+        self.nav_buttons = [self.btn_android, self.btn_ios, self.btn_obs, self.btn_setup, self.btn_hub, self.btn_booster, self.btn_sys_info, self.btn_flasher]
         
         # Initial indicators refresh
         self.update_sidebar_indicators()
@@ -196,36 +202,38 @@ class MainWindow(QMainWindow):
             
         self.stacked_widget.setCurrentIndex(index)
 
+    def show_engine_status_details(self):
+        android_ok = bool(self.downloader.get_scrcpy_path())
+        ios_ok = bool(self.downloader.get_uxplay_path())
+        bonjour_ok = self.downloader.is_bonjour_installed()
+        fastboot_ok = bool(self.downloader.get_platform_tools_path())
+        
+        status_msg = "<h3>System Engine & Driver Installation Status:</h3><br>"
+        
+        status_msg += f"● <b>Android Mirroring Engine:</b> {'<font color=#2ECC71><b>Ready</b></font>' if android_ok else '<font color=#E74C3C><b>Missing</b></font>'}<br>"
+        status_msg += f"● <b>iOS AirPlay Engine:</b> {'<font color=#2ECC71><b>Ready</b></font>' if ios_ok else '<font color=#E74C3C><b>Missing</b></font>'}<br>"
+        status_msg += f"● <b>Apple Bonjour Service:</b> {'<font color=#2ECC71><b>Active</b></font>' if bonjour_ok else '<font color=#E74C3C><b>Missing</b></font>'}<br>"
+        status_msg += f"● <b>Fastboot Engine (Platform Tools):</b> {'<font color=#2ECC71><b>Ready</b></font>' if fastboot_ok else '<font color=#E74C3C><b>Missing</b></font>'}<br><br>"
+        
+        status_msg += "<i>If any engine or service is listed as missing, go to the <b>Setup & Drivers</b> tab to download and configure it automatically with a single click.</i>"
+        
+        QMessageBox.information(self, "System Engines Status Monitor", status_msg)
+
     def update_sidebar_indicators(self):
-        """Refreshes sidebar indicator badges depending on installation state."""
-        # Android
-        if self.downloader.get_scrcpy_path():
-            self.android_indicator.setText("● Android Engine: Ready")
-            self.android_indicator.setObjectName("indReady")
+        """Refreshes sidebar indicator button depending on installation state."""
+        android_ok = bool(self.downloader.get_scrcpy_path())
+        ios_ok = bool(self.downloader.get_uxplay_path())
+        bonjour_ok = self.downloader.is_bonjour_installed()
+        fastboot_ok = bool(self.downloader.get_platform_tools_path())
+        
+        if android_ok and ios_ok and bonjour_ok and fastboot_ok:
+            self.btn_system_status.setText("● System Status: Ready")
+            self.btn_system_status.setObjectName("btnSystemStatusReady")
         else:
-            self.android_indicator.setText("● Android Engine: Missing")
-            self.android_indicator.setObjectName("indMissing")
-
-        # iOS
-        if self.downloader.get_uxplay_path():
-            self.ios_indicator.setText("● iOS Engine: Ready")
-            self.ios_indicator.setObjectName("indReady")
-        else:
-            self.ios_indicator.setText("● iOS Engine: Missing")
-            self.ios_indicator.setObjectName("indMissing")
-
-        # Bonjour
-        if self.downloader.is_bonjour_installed():
-            self.bonjour_indicator.setText("● Bonjour Service: Active")
-            self.bonjour_indicator.setObjectName("indReady")
-        else:
-            self.bonjour_indicator.setText("● Bonjour Service: Missing")
-            self.bonjour_indicator.setObjectName("indMissing")
-
-        # Force stylesheet refreshes
-        self.android_indicator.setStyle(self.android_indicator.style())
-        self.ios_indicator.setStyle(self.ios_indicator.style())
-        self.bonjour_indicator.setStyle(self.bonjour_indicator.style())
+            self.btn_system_status.setText("● System Status: Setup Needed")
+            self.btn_system_status.setObjectName("btnSystemStatusMissing")
+            
+        self.btn_system_status.setStyle(self.btn_system_status.style())
 
     def update_system_status(self):
         import psutil
@@ -307,7 +315,7 @@ class MainWindow(QMainWindow):
             msg = config.get("maintenance_msg", "System upgrades in progress. Please check back later.")
             if hasattr(self, 'maintenance_tab'):
                 self.maintenance_tab.set_message(msg)
-            self.stacked_widget.setCurrentIndex(7) # Switch to Maintenance locking tab
+            self.stacked_widget.setCurrentIndex(8) # Switch to Maintenance locking tab (shifted index)
             self.sidebar.hide() # Lock navigation
 
     def closeEvent(self, event):
