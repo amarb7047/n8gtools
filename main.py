@@ -23,8 +23,8 @@ QFrame#sidebar {
 
 QWidget#logoContainer {
     background-color: transparent;
-    border-bottom: 1px solid #1F2430;
-    margin-bottom: 5px;
+    border: none;
+    margin-bottom: 0px;
 }
 
 QLabel#logoTitle {
@@ -70,7 +70,7 @@ QPushButton#sidebarBtnActive {
 /* Indicators */
 QFrame#statusPanel {
     background-color: #0B0C10;
-    border-top: 1px solid #1F2430;
+    border-top: none;
     border-radius: 0px;
 }
 
@@ -79,9 +79,10 @@ QPushButton#btnSystemStatusChecking {
     border: 1px solid #94A3B8;
     color: #94A3B8;
     font-weight: 600;
-    font-size: 11px;
-    border-radius: 5px;
-    padding: 5px;
+    font-size: 10px;
+    border-radius: 12px;
+    padding: 4px 10px;
+    margin: 5px 20px;
 }
 
 QPushButton#btnSystemStatusReady {
@@ -89,9 +90,10 @@ QPushButton#btnSystemStatusReady {
     border: 1px solid #2ECC71;
     color: #2ECC71;
     font-weight: 600;
-    font-size: 11px;
-    border-radius: 5px;
-    padding: 5px;
+    font-size: 10px;
+    border-radius: 12px;
+    padding: 4px 10px;
+    margin: 5px 20px;
 }
 
 QPushButton#btnSystemStatusMissing {
@@ -99,14 +101,48 @@ QPushButton#btnSystemStatusMissing {
     border: 1px solid #E74C3C;
     color: #E74C3C;
     font-weight: 600;
-    font-size: 11px;
-    border-radius: 5px;
-    padding: 5px;
+    font-size: 10px;
+    border-radius: 12px;
+    padding: 4px 10px;
+    margin: 5px 20px;
 }
 
 /* Tab Content Styling */
 QStackedWidget#stackedWidget {
     background-color: #12141C;
+}
+
+/* Sub-Tab Bar Custom Theme Styling */
+QTabWidget::pane {
+    border: 1px solid #1F2833;
+    background-color: #12141C;
+    border-radius: 8px;
+    top: -1px;
+}
+
+QTabBar::tab {
+    background-color: #171B26;
+    color: #8E9AAF;
+    border: 1px solid #1F2833;
+    border-bottom: none;
+    padding: 8px 15px;
+    font-size: 11px;
+    font-weight: 600;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    margin-right: 2px;
+}
+
+QTabBar::tab:hover {
+    background-color: #1F2833;
+    color: #E2E8F0;
+}
+
+QTabBar::tab:selected {
+    background-color: #12141C;
+    color: #66FCF1;
+    border-top: 2px solid #66FCF1;
+    font-weight: bold;
 }
 
 QLabel#tabTitle {

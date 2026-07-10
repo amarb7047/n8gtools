@@ -715,11 +715,11 @@ class FlasherTab(QWidget):
         
         rom_picker_layout = QHBoxLayout()
         self.txt_rom_path = QLineEdit()
-        self.txt_rom_path.setPlaceholderText("Select folder containing extracted Fastboot ROM firmware...")
+        self.txt_rom_path.setPlaceholderText("Select extracted ROM folder or Zip/Tgz ROM file...")
         
-        btn_rom_browse = QPushButton("Browse Folder")
+        btn_rom_browse = QPushButton("Browse Folder / Zip")
         btn_rom_browse.setObjectName("btnSecondary")
-        btn_rom_browse.clicked.connect(self.browse_rom_dir)
+        btn_rom_browse.clicked.connect(self.browse_rom_file_or_dir)
         
         rom_picker_layout.addWidget(self.txt_rom_path)
         rom_picker_layout.addWidget(btn_rom_browse)
@@ -757,25 +757,38 @@ class FlasherTab(QWidget):
         img_picker_layout.addWidget(btn_img_browse)
         img_layout.addLayout(img_picker_layout)
 
-        part_layout = QHBoxLayout()
+        part_form = QFormLayout()
         self.combo_part = QComboBox()
-        self.combo_part.addItems(["boot", "recovery", "vbmeta", "system", "vendor", "super", "userdata", "cache", "logo"])
-        self.combo_part.setEditable(True) # Allow user to type custom partitions
+        self.combo_part.addItems([
+            "boot (Kernel / Boot Image)", 
+            "recovery (Custom Recovery like TWRP/OrangeFox)", 
+            "vbmeta (Verified Boot Metadata)", 
+            "system (Android System OS)", 
+            "vendor (Hardware Drivers)", 
+            "super (Dynamic/Super Partition)", 
+            "userdata (Format / Write User Storage)", 
+            "cache (Temporary cache files)", 
+            "logo (Boot Splash Logo)"
+        ])
+        self.combo_part.setEditable(True)
         self.combo_part.setMinimumHeight(35)
-        
+        part_form.addRow("Select Target Partition:", self.combo_part)
+        img_layout.addLayout(part_form)
+
+        img_btn_layout = QHBoxLayout()
         self.btn_flash_part = QPushButton("Flash Image to Partition")
         self.btn_flash_part.setObjectName("btnAction")
+        self.btn_flash_part.setMinimumHeight(40)
         self.btn_flash_part.clicked.connect(self.flash_partition_image)
         
-        self.btn_boot_img = QPushButton("Boot Image Temporarily")
+        self.btn_boot_img = QPushButton("Boot Image Temporarily (Test Mode)")
         self.btn_boot_img.setObjectName("btnSecondary")
+        self.btn_boot_img.setMinimumHeight(40)
         self.btn_boot_img.clicked.connect(self.boot_partition_image)
 
-        part_layout.addWidget(QLabel("Partition Target:"))
-        part_layout.addWidget(self.combo_part, 1)
-        part_layout.addWidget(self.btn_flash_part)
-        part_layout.addWidget(self.btn_boot_img)
-        img_layout.addLayout(part_layout)
+        img_btn_layout.addWidget(self.btn_flash_part)
+        img_btn_layout.addWidget(self.btn_boot_img)
+        img_layout.addLayout(img_btn_layout)
 
         layout.addWidget(img_box)
         layout.addStretch()
@@ -973,6 +986,80 @@ class FlasherTab(QWidget):
         self.sub_tabs.addTab(tab, "Advanced Repairs")
 
     # File dialog pickers
+    def browse_rom_file_or_dir(self):
+        choice = QMessageBox.question(
+            self, 
+            "Select ROM Format", 
+            "Do you want to select an extracted ROM folder?\n\n(Choose 'No' to select a compressed .zip/.tgz file directly)",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        
+        if choice == QMessageBox.Yes:
+            dir_path = QFileDialog.getExistingDirectory(self, "Select Fastboot ROM Folder")
+            if dir_path:
+                self.txt_rom_path.setText(dir_path)
+                self.scan_rom_scripts(dir_path)
+        else:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, 
+                "Select Compressed ROM File", 
+                "", 
+                "Compressed Archives (*.zip *.tgz *.tar.gz)"
+            )
+            if file_path:
+                self.txt_rom_path.setText(file_path)
+                self.extract_and_scan_rom(file_path)
+
+    def extract_and_scan_rom(self, archive_path):
+        import zipfile
+        import tarfile
+        import shutil
+        
+        workspace_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+        extract_dir = os.path.join(workspace_dir, "extracted_rom")
+        
+        if os.path.exists(extract_dir):
+            try:
+                shutil.rmtree(extract_dir)
+            except Exception:
+                pass
+        
+        os.makedirs(extract_dir, exist_ok=True)
+        
+        self.log(f"Extracting compressed ROM archive: {os.path.basename(archive_path)}...")
+        self.log("Please wait, this may take a moment...")
+        
+        def do_extract():
+            try:
+                if archive_path.lower().endswith('.zip'):
+                    with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+                        zip_ref.extractall(extract_dir)
+                else: # .tgz, .tar.gz
+                    with tarfile.open(archive_path, 'r:gz') as tar_ref:
+                        tar_ref.extractall(extract_dir)
+                
+                scan_dir = extract_dir
+                for root, dirs, files in os.walk(extract_dir):
+                    if any(f.endswith(('.bat', '.sh')) and 'flash' in f.lower() for f in files):
+                        scan_dir = root
+                        break
+                
+                def on_done():
+                    self.txt_rom_path.setText(scan_dir)
+                    self.scan_rom_scripts(scan_dir)
+                    self.log(f"ROM extraction completed successfully! Loaded scripts from {scan_dir}")
+                    QMessageBox.information(self, "Extraction Success", "ROM archive extracted successfully! Ready to flash.")
+                
+                QTimer.singleShot(0, on_done)
+                
+            except Exception as e:
+                def on_error():
+                    QMessageBox.critical(self, "Extraction Error", f"Failed to extract ROM: {str(e)}")
+                    self.log(f"Extraction Failed: {str(e)}")
+                QTimer.singleShot(0, on_error)
+
+        threading.Thread(target=do_extract, daemon=True).start()
+
     def browse_rom_dir(self):
         dir_path = QFileDialog.getExistingDirectory(self, "Select Fastboot ROM Folder")
         if dir_path:
@@ -1333,7 +1420,8 @@ class FlasherTab(QWidget):
 
     def flash_partition_image(self):
         img_path = self.txt_img_path.text().strip()
-        part = self.combo_part.currentText().strip()
+        raw_part = self.combo_part.currentText().strip()
+        part = raw_part.split()[0].strip() if raw_part else ""
         
         if not img_path or not part:
             QMessageBox.warning(self, "Input Error", "Please select an image file and target partition name.")

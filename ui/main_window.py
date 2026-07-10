@@ -65,7 +65,7 @@ class MainWindow(QMainWindow):
         logo_container = QWidget()
         logo_container.setObjectName("logoContainer")
         logo_layout = QVBoxLayout(logo_container)
-        logo_layout.setContentsMargins(15, 10, 15, 10)
+        logo_layout.setContentsMargins(15, 5, 15, 5)
         
         logo_title = QLabel("N8 G Tools")
         logo_title.setObjectName("logoTitle")
@@ -140,7 +140,7 @@ class MainWindow(QMainWindow):
         status_panel = QFrame()
         status_panel.setObjectName("statusPanel")
         status_layout = QVBoxLayout(status_panel)
-        status_layout.setContentsMargins(10, 10, 10, 10)
+        status_layout.setContentsMargins(5, 5, 5, 5)
         status_layout.setSpacing(5)
 
         self.btn_system_status = QPushButton("● System Status: Checking...")
