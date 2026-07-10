@@ -209,6 +209,14 @@ QComboBox::drop-down {
     border: none;
 }
 
+QComboBox QAbstractItemView {
+    background-color: #171B26;
+    color: #E2E8F0;
+    selection-background-color: #4F46E5;
+    selection-color: #FFFFFF;
+    border: 1px solid #1F2833;
+}
+
 QCheckBox {
     color: #E2E8F0;
     font-size: 13px;
