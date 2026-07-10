@@ -8,7 +8,7 @@ a = Analysis(
         ('logo.ico', '.'),
         ('N8Gamer.jpeg', '.')
     ],
-    hiddenimports=[],
+    hiddenimports=['Cryptodome'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
