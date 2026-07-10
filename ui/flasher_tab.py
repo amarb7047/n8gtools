@@ -581,9 +581,7 @@ class FlasherTab(QWidget):
 
         main_layout.addWidget(self.status_card)
 
-        # Main Sub-sections tabs
         self.sub_tabs = QTabWidget()
-        self.sub_tabs.setStyleSheet("QTabWidget::pane { border: 1px solid #1F2833; background: #12141C; }")
         
         self.create_xiaomi_tab()
         self.create_fastboot_tab()
