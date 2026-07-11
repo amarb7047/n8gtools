@@ -146,6 +146,15 @@ class MirrorRunner:
 
             p = subprocess.Popen(cmd, creationflags=creationflags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.active_processes[process_key] = p
+
+            # Elevate process priority to High for zero-lag CPU scheduling
+            try:
+                import psutil
+                proc = psutil.Process(p.pid)
+                proc.nice(psutil.HIGH_PRIORITY_CLASS)
+            except Exception:
+                pass
+
             return True, "iOS AirPlay Server started. Open Control Center on iPhone/iPad and select Mirroring."
         except Exception as e:
             return False, f"Failed to launch uxplay: {e}"

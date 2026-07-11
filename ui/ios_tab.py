@@ -81,9 +81,10 @@ class IosTab(QWidget):
 
         self.res_combo = QComboBox()
         self.res_combo.addItems([
-            "Native/Auto (Recommended for iPad & Smoothness)",
-            "1920x1080 (FHD)",
-            "1280x720 (HD)",
+            "1280x720 (HD - Ultra Smooth, Zero Lag)",
+            "1024x768 (iPad Standard - High Smoothness)",
+            "1920x1080 (FHD - High Quality)",
+            "Native/Auto (Highest Quality - May Lag)",
             "3840x2160 (4K UHD)",
             "2560x1440 (2K QHD)"
         ])
@@ -270,10 +271,12 @@ class IosTab(QWidget):
             res = "3840x2160"
         elif "2560" in res_text:
             res = "2560x1440"
-        elif "1280" in res_text:
-            res = "1280x720"
-        else:
+        elif "1920" in res_text:
             res = "1920x1080"
+        elif "1024" in res_text:
+            res = "1024x768"
+        else:
+            res = "1280x720"
 
         fps_text = self.fps_combo.currentText()
         if "120" in fps_text:
