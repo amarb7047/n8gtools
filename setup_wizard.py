@@ -207,7 +207,7 @@ class InstallThread(QThread):
             
             # Set values
             winreg.SetValueEx(key, "DisplayName", 0, winreg.REG_SZ, "N8 G Tools")
-            winreg.SetValueEx(key, "DisplayVersion", 0, winreg.REG_SZ, "1.0.5")
+            winreg.SetValueEx(key, "DisplayVersion", 0, winreg.REG_SZ, "1.0.6")
             winreg.SetValueEx(key, "Publisher", 0, winreg.REG_SZ, "N8 G Tools Team")
             winreg.SetValueEx(key, "DisplayIcon", 0, winreg.REG_SZ, ico_path)
             
