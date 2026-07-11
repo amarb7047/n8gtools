@@ -82,9 +82,9 @@ class IosTab(QWidget):
 
         self.res_combo = QComboBox()
         self.res_combo.addItems([
-            "1920x1080 (FHD - High Quality)",
             "1280x720 (HD - Ultra Smooth, Zero Lag)",
             "1024x768 (iPad Standard - High Smoothness)",
+            "1920x1080 (FHD - High Quality)",
             "Native/Auto (Highest Quality - May Lag)",
             "3840x2160 (4K UHD)",
             "2560x1440 (2K QHD)"
@@ -109,16 +109,16 @@ class IosTab(QWidget):
         ])
         self.audio_delay_combo.setMinimumHeight(35)
 
-        self.sync_check = QCheckBox("Enable Audio-Video Sync (V-Sync) [Prevents Lag Accumulation]")
-        self.sync_check.setChecked(True)
+        self.sync_check = QCheckBox("Enable Audio-Video Sync (V-Sync) [Turn OFF to fix high-motion stutter/lag]")
+        self.sync_check.setChecked(False)
 
         self.audio_check = QCheckBox("Mute AirPlay Audio (Stream Video Only - Fixes Game Crashes)")
         self.audio_check.setChecked(False)
 
         self.sink_combo = QComboBox()
         self.sink_combo.addItems([
-            "Direct3D 11 (Hardware Accelerated)",
             "Automatic Selection (Auto - Recommended)",
+            "Direct3D 11 (Hardware Accelerated)",
             "OpenGL (Cross-Platform GL Sink)"
         ])
         self.sink_combo.setMinimumHeight(35)
