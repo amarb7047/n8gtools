@@ -99,7 +99,7 @@ class MirrorRunner:
             return False, f"Failed to launch scrcpy: {e}"
 
     def start_ios_mirror(self, fps="60", resolution="1920x1080", vsync=True, audio_delay="0.25", 
-                         audio_enabled=True, video_sink="d3d11videosink", software_decoding=False):
+                         audio_enabled=True, video_sink="d3d11videosink", audio_sink="autoaudiosink", software_decoding=False):
         """Launches uxplay AirPlay server."""
         uxplay_exe = self.downloader.get_uxplay_path()
         if not uxplay_exe:
@@ -108,11 +108,14 @@ class MirrorRunner:
         if not self.downloader.is_bonjour_installed():
             return False, "Apple Bonjour Service is required for AirPlay discovery."
 
-        # Build command list - Set network name to N8 G Tools
-        cmd = [uxplay_exe, "-n", "N8 G Tools", "-nh"]
+        # Build command list - Set network name to N8-G-Tools to avoid space parsing/caching bugs
+        cmd = [uxplay_exe, "-n", "N8-G-Tools", "-nh"]
         
         if video_sink:
             cmd += ["-vs", video_sink]
+            
+        if audio_sink:
+            cmd += ["-as", audio_sink]
             
         if software_decoding:
             cmd += ["-avdec"]

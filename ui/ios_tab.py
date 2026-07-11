@@ -81,7 +81,8 @@ class IosTab(QWidget):
 
         self.res_combo = QComboBox()
         self.res_combo.addItems([
-            "1920x1080 (FHD - Recommended)",
+            "Native/Auto (Recommended for iPad & Smoothness)",
+            "1920x1080 (FHD)",
             "1280x720 (HD)",
             "3840x2160 (4K UHD)",
             "2560x1440 (2K QHD)"
@@ -99,9 +100,9 @@ class IosTab(QWidget):
 
         self.audio_delay_combo = QComboBox()
         self.audio_delay_combo.addItems([
-            "0.25 seconds (Default)",
+            "0.05 seconds (Ultra Low - Recommended)",
             "0.15 seconds (Low Latency)",
-            "0.05 seconds (Ultra Low)",
+            "0.25 seconds (Default)",
             "0.00 seconds (No Delay)"
         ])
         self.audio_delay_combo.setMinimumHeight(35)
@@ -114,19 +115,28 @@ class IosTab(QWidget):
 
         self.sink_combo = QComboBox()
         self.sink_combo.addItems([
-            "Direct3D 11 (Hardware Accelerated - Default)",
-            "OpenGL (Cross-Platform GL Sink)",
-            "Automatic Selection (Auto)"
+            "Automatic Selection (Auto - Recommended)",
+            "Direct3D 11 (Hardware Accelerated)",
+            "OpenGL (Cross-Platform GL Sink)"
         ])
         self.sink_combo.setMinimumHeight(35)
 
-        self.software_dec_check = QCheckBox("Enable H.264 Software Decoding (avdec) [Recommended for Zero Lag]")
-        self.software_dec_check.setChecked(True)
+        self.audio_sink_combo = QComboBox()
+        self.audio_sink_combo.addItems([
+            "Automatic Selection (Auto - Recommended)",
+            "WASAPI (Low Latency - Modern Windows)",
+            "DirectSound (Legacy Fallback)"
+        ])
+        self.audio_sink_combo.setMinimumHeight(35)
+
+        self.software_dec_check = QCheckBox("Enable H.264 Software Decoding (avdec) [Check if screen gets glitchy]")
+        self.software_dec_check.setChecked(False)
 
         config_layout.addRow("Mirroring Resolution:", self.res_combo)
         config_layout.addRow("Frame Rate Suggestion:", self.fps_combo)
         config_layout.addRow("Audio Buffer Latency:", self.audio_delay_combo)
         config_layout.addRow("Video Renderer Sink:", self.sink_combo)
+        config_layout.addRow("Audio Renderer Sink:", self.audio_sink_combo)
         config_layout.addRow("", self.sync_check)
         config_layout.addRow("", self.audio_check)
         config_layout.addRow("", self.software_dec_check)
@@ -172,14 +182,14 @@ class IosTab(QWidget):
             "  <li>Connect the iOS device to your PC using a USB cable.</li>"
             "  <li>Select <b>'Trust this Computer'</b> if prompted on iOS.</li>"
             "  <li>Start the AirPlay Server in this app.</li>"
-            "  <li>Open iOS Control Center, tap <b>Screen Mirroring</b>, and select <b>'N8 G Tools'</b>.</li>"
+            "  <li>Open iOS Control Center, tap <b>Screen Mirroring</b>, and select <b>'N8-G-Tools'</b>.</li>"
             "</ol>"
             "<hr/>"
             "<h3>Option B: Wireless (Wi-Fi)</h3>"
             "<ol>"
             "  <li>Connect both your PC and iOS device to the <b>same Wi-Fi router</b>.</li>"
             "  <li>Start the AirPlay Server in this app.</li>"
-            "  <li>Open iOS Control Center, tap <b>Screen Mirroring</b>, and select <b>'N8 G Tools'</b>.</li>"
+            "  <li>Open iOS Control Center, tap <b>Screen Mirroring</b>, and select <b>'N8-G-Tools'</b>.</li>"
             "</ol>"
             "<hr/>"
             "<p style='color:#2ECC71; font-weight:bold;'>"
@@ -252,9 +262,11 @@ class IosTab(QWidget):
             pass
 
     def _parse_settings(self):
-        """Parse current UI combo selections and return (res, fps, vsync, audio_delay, audio_enabled, sink, software_decoding)."""
+        """Parse current UI combo selections and return (res, fps, vsync, audio_delay, audio_enabled, sink, audio_sink, software_decoding)."""
         res_text = self.res_combo.currentText()
-        if "3840" in res_text:
+        if "Native/Auto" in res_text:
+            res = None
+        elif "3840" in res_text:
             res = "3840x2160"
         elif "2560" in res_text:
             res = "2560x1440"
@@ -276,10 +288,10 @@ class IosTab(QWidget):
         delay_map = {
             "0.25 seconds (Default)": "0.25",
             "0.15 seconds (Low Latency)": "0.15",
-            "0.05 seconds (Ultra Low)": "0.05",
+            "0.05 seconds (Ultra Low - Recommended)": "0.05",
             "0.00 seconds (No Delay)": "0.00",
         }
-        audio_delay = delay_map.get(self.audio_delay_combo.currentText(), "0.25")
+        audio_delay = delay_map.get(self.audio_delay_combo.currentText(), "0.05")
         vsync = self.sync_check.isChecked()
         audio_enabled = not self.audio_check.isChecked()
 
@@ -291,22 +303,30 @@ class IosTab(QWidget):
         else:
             sink = "autovideosink"
 
+        audio_sink_text = self.audio_sink_combo.currentText()
+        if "WASAPI" in audio_sink_text:
+            audio_sink = "wasapisink"
+        elif "DirectSound" in audio_sink_text:
+            audio_sink = "directsoundsink"
+        else:
+            audio_sink = "autoaudiosink"
+
         software_decoding = self.software_dec_check.isChecked()
-        return res, fps, vsync, audio_delay, audio_enabled, sink, software_decoding
+        return res, fps, vsync, audio_delay, audio_enabled, sink, audio_sink, software_decoding
 
     def start_server_silent(self):
-        res, fps, vsync, audio_delay, audio_enabled, sink, software_decoding = self._parse_settings()
+        res, fps, vsync, audio_delay, audio_enabled, sink, audio_sink, software_decoding = self._parse_settings()
         self.status_label.setText("Auto-Starting Server (USB)...")
         success, msg = self.runner.start_ios_mirror(
             fps=fps, resolution=res, vsync=vsync, audio_delay=audio_delay, 
-            audio_enabled=audio_enabled, video_sink=sink, software_decoding=software_decoding)
+            audio_enabled=audio_enabled, video_sink=sink, audio_sink=audio_sink, software_decoding=software_decoding)
 
         if success:
             self.launch_btn.setText("STOP AIRPLAY SERVER")
             self.launch_btn.setObjectName("btnStop")
             self.launch_btn.setStyle(self.launch_btn.style())
             self.status_label.setText(
-                "Status: Server Online (USB Auto). Open Control Center > Screen Mirroring > N8 G Tools")
+                "Status: Server Online (USB Auto). Open Control Center > Screen Mirroring > N8-G-Tools")
         else:
             self.status_label.setText(f"Status: Auto-Launch failed: {msg}")
 
@@ -331,18 +351,18 @@ class IosTab(QWidget):
                     "Apple Bonjour Service is missing. Please setup drivers in Setup tab.")
                 return
 
-            res, fps, vsync, audio_delay, audio_enabled, sink, software_decoding = self._parse_settings()
+            res, fps, vsync, audio_delay, audio_enabled, sink, audio_sink, software_decoding = self._parse_settings()
             self.status_label.setText("Starting Server...")
             success, msg = self.runner.start_ios_mirror(
                 fps=fps, resolution=res, vsync=vsync, audio_delay=audio_delay, 
-                audio_enabled=audio_enabled, video_sink=sink, software_decoding=software_decoding)
+                audio_enabled=audio_enabled, video_sink=sink, audio_sink=audio_sink, software_decoding=software_decoding)
 
             if success:
                 self.launch_btn.setText("STOP AIRPLAY SERVER")
                 self.launch_btn.setObjectName("btnStop")
                 self.launch_btn.setStyle(self.launch_btn.style())
                 self.status_label.setText(
-                    "Status: Server Online. Open Control Center > Screen Mirroring > N8 G Tools")
+                    "Status: Server Online. Open Control Center > Screen Mirroring > N8-G-Tools")
             else:
                 QMessageBox.critical(
                     self, "Server Error", f"Failed to start server: {msg}")
