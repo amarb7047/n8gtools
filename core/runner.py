@@ -98,7 +98,8 @@ class MirrorRunner:
         except Exception as e:
             return False, f"Failed to launch scrcpy: {e}"
 
-    def start_ios_mirror(self, fps="60", resolution="1920x1080", vsync=True, audio_delay="0.25", audio_enabled=True):
+    def start_ios_mirror(self, fps="60", resolution="1920x1080", vsync=True, audio_delay="0.25", 
+                         audio_enabled=True, video_sink="d3d11videosink", software_decoding=False):
         """Launches uxplay AirPlay server."""
         uxplay_exe = self.downloader.get_uxplay_path()
         if not uxplay_exe:
@@ -110,9 +111,11 @@ class MirrorRunner:
         # Build command list - Set network name to N8 G Tools
         cmd = [uxplay_exe, "-n", "N8 G Tools", "-nh"]
         
-        # On Windows, use Direct3D 11 hardware-accelerated video rendering for maximum smoothness
-        if os.name == 'nt':
-            cmd += ["-vs", "d3d11videosink"]
+        if video_sink:
+            cmd += ["-vs", video_sink]
+            
+        if software_decoding:
+            cmd += ["-avdec"]
         
         if fps:
             cmd += ["-fps", fps]

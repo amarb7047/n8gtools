@@ -112,11 +112,24 @@ class IosTab(QWidget):
         self.audio_check = QCheckBox("Mute AirPlay Audio (Stream Video Only - Fixes Game Crashes)")
         self.audio_check.setChecked(False)
 
+        self.sink_combo = QComboBox()
+        self.sink_combo.addItems([
+            "Direct3D 11 (Hardware Accelerated - Default)",
+            "OpenGL (Cross-Platform GL Sink)",
+            "Automatic Selection (Auto)"
+        ])
+        self.sink_combo.setMinimumHeight(35)
+
+        self.software_dec_check = QCheckBox("Enable H.264 Software Decoding (avdec) [Recommended for Zero Lag]")
+        self.software_dec_check.setChecked(True)
+
         config_layout.addRow("Mirroring Resolution:", self.res_combo)
         config_layout.addRow("Frame Rate Suggestion:", self.fps_combo)
         config_layout.addRow("Audio Buffer Latency:", self.audio_delay_combo)
+        config_layout.addRow("Video Renderer Sink:", self.sink_combo)
         config_layout.addRow("", self.sync_check)
         config_layout.addRow("", self.audio_check)
+        config_layout.addRow("", self.software_dec_check)
 
         left_layout.addWidget(config_group)
 
@@ -239,7 +252,7 @@ class IosTab(QWidget):
             pass
 
     def _parse_settings(self):
-        """Parse current UI combo selections and return (res, fps, vsync, audio_delay, audio_enabled)."""
+        """Parse current UI combo selections and return (res, fps, vsync, audio_delay, audio_enabled, sink, software_decoding)."""
         res_text = self.res_combo.currentText()
         if "3840" in res_text:
             res = "3840x2160"
@@ -269,13 +282,24 @@ class IosTab(QWidget):
         audio_delay = delay_map.get(self.audio_delay_combo.currentText(), "0.25")
         vsync = self.sync_check.isChecked()
         audio_enabled = not self.audio_check.isChecked()
-        return res, fps, vsync, audio_delay, audio_enabled
+
+        sink_text = self.sink_combo.currentText()
+        if "Direct3D" in sink_text:
+            sink = "d3d11videosink"
+        elif "OpenGL" in sink_text:
+            sink = "glimagesink"
+        else:
+            sink = "autovideosink"
+
+        software_decoding = self.software_dec_check.isChecked()
+        return res, fps, vsync, audio_delay, audio_enabled, sink, software_decoding
 
     def start_server_silent(self):
-        res, fps, vsync, audio_delay, audio_enabled = self._parse_settings()
+        res, fps, vsync, audio_delay, audio_enabled, sink, software_decoding = self._parse_settings()
         self.status_label.setText("Auto-Starting Server (USB)...")
         success, msg = self.runner.start_ios_mirror(
-            fps=fps, resolution=res, vsync=vsync, audio_delay=audio_delay, audio_enabled=audio_enabled)
+            fps=fps, resolution=res, vsync=vsync, audio_delay=audio_delay, 
+            audio_enabled=audio_enabled, video_sink=sink, software_decoding=software_decoding)
 
         if success:
             self.launch_btn.setText("STOP AIRPLAY SERVER")
@@ -307,10 +331,11 @@ class IosTab(QWidget):
                     "Apple Bonjour Service is missing. Please setup drivers in Setup tab.")
                 return
 
-            res, fps, vsync, audio_delay, audio_enabled = self._parse_settings()
+            res, fps, vsync, audio_delay, audio_enabled, sink, software_decoding = self._parse_settings()
             self.status_label.setText("Starting Server...")
             success, msg = self.runner.start_ios_mirror(
-                fps=fps, resolution=res, vsync=vsync, audio_delay=audio_delay, audio_enabled=audio_enabled)
+                fps=fps, resolution=res, vsync=vsync, audio_delay=audio_delay, 
+                audio_enabled=audio_enabled, video_sink=sink, software_decoding=software_decoding)
 
             if success:
                 self.launch_btn.setText("STOP AIRPLAY SERVER")
