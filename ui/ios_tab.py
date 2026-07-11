@@ -1,5 +1,6 @@
 import os
 import subprocess
+import ctypes
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QComboBox, QCheckBox, QGroupBox,
                              QFormLayout, QMessageBox, QScrollArea, QFrame)
@@ -81,9 +82,9 @@ class IosTab(QWidget):
 
         self.res_combo = QComboBox()
         self.res_combo.addItems([
+            "1920x1080 (FHD - High Quality)",
             "1280x720 (HD - Ultra Smooth, Zero Lag)",
             "1024x768 (iPad Standard - High Smoothness)",
-            "1920x1080 (FHD - High Quality)",
             "Native/Auto (Highest Quality - May Lag)",
             "3840x2160 (4K UHD)",
             "2560x1440 (2K QHD)"
@@ -101,23 +102,23 @@ class IosTab(QWidget):
 
         self.audio_delay_combo = QComboBox()
         self.audio_delay_combo.addItems([
-            "0.05 seconds (Ultra Low - Recommended)",
-            "0.15 seconds (Low Latency)",
             "0.25 seconds (Default)",
+            "0.15 seconds (Low Latency)",
+            "0.05 seconds (Ultra Low - Recommended)",
             "0.00 seconds (No Delay)"
         ])
         self.audio_delay_combo.setMinimumHeight(35)
 
-        self.sync_check = QCheckBox("Enable Audio-Video Sync (V-Sync)")
-        self.sync_check.setChecked(False)
+        self.sync_check = QCheckBox("Enable Audio-Video Sync (V-Sync) [Prevents Lag Accumulation]")
+        self.sync_check.setChecked(True)
 
         self.audio_check = QCheckBox("Mute AirPlay Audio (Stream Video Only - Fixes Game Crashes)")
         self.audio_check.setChecked(False)
 
         self.sink_combo = QComboBox()
         self.sink_combo.addItems([
-            "Automatic Selection (Auto - Recommended)",
             "Direct3D 11 (Hardware Accelerated)",
+            "Automatic Selection (Auto - Recommended)",
             "OpenGL (Cross-Platform GL Sink)"
         ])
         self.sink_combo.setMinimumHeight(35)
@@ -226,10 +227,24 @@ class IosTab(QWidget):
 
         if iphone_devices:
             dev_name = iphone_devices[0]["model"]
-            self.usb_status_label.setText(
-                f"● USB Connected: {dev_name}\n(Personal Hotspot must be active)")
-            self.usb_status_label.setStyleSheet(
-                "font-weight: bold; color: #2ECC71;")
+            
+            try:
+                is_admin = ctypes.windll.shell32.IsUserAnAdmin()
+            except Exception:
+                is_admin = False
+
+            if not is_admin and self.optimize_route_check.isChecked():
+                self.usb_status_label.setText(
+                    f"● USB Connected: {dev_name}\n"
+                    f"⚠️ Warning: Please run this App as Administrator\n"
+                    f"to prevent PC internet from routing over USB.")
+                self.usb_status_label.setStyleSheet(
+                    "font-weight: bold; color: #F5B041;")
+            else:
+                self.usb_status_label.setText(
+                    f"● USB Connected: {dev_name}\n(Personal Hotspot must be active)")
+                self.usb_status_label.setStyleSheet(
+                    "font-weight: bold; color: #2ECC71;")
 
             if self.optimize_route_check.isChecked():
                 self.optimize_network_routing()
