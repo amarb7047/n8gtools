@@ -144,6 +144,11 @@ class MirrorRunner:
             process_key = "ios_airplay"
             self.stop_process(process_key)
 
+            # Kill any orphaned uxplay instances to free up ports
+            if os.name == 'nt':
+                subprocess.run(["taskkill", "/f", "/im", "uxplay.exe"], 
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
             p = subprocess.Popen(cmd, creationflags=creationflags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.active_processes[process_key] = p
 
